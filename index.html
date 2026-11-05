@@ -689,59 +689,30 @@ function renderDashboard(){
 
  document.getElementById('todayRevenue').textContent=money(omzet);
 
- let totalHpp=0;
- let totalQty=0;
- let incomplete=false;
- const bestProducts={};
 
- todays.forEach(t=>{
-  (t.items||[]).forEach(item=>{
-   const qty=Number(item.qty||0);
-   totalQty+=qty;
+let totalHpp = todays.reduce(
+  (sum, s) => sum + Number(s.totalHpp || 0),
+  0
+);
 
-   const name=item.name||'Produk';
-   bestProducts[name]=(bestProducts[name]||0)+qty;
+let totalQty = 0;
+let incomplete = todays.some(s =>
+  !Number.isFinite(Number(s.totalHpp)) ||
+  Number(s.totalHpp) <= 0
+);
 
-   const product=products.find(p=>
-    String(p.id)===String(item.productId)
-   );
+const bestProducts = {};
 
-   if(!product){
-    incomplete=true;
-    return;
-   }
+todays.forEach(t => {
+  (t.items || []).forEach(item => {
+    const qty = Number(item.qty || 0);
+    totalQty += qty;
 
-   const productRecipes=recipes.filter(r=>
-    String(r.productId)===String(product.id)
-   );
-
-   if(!productRecipes.length){
-    incomplete=true;
-    return;
-   }
-
-   productRecipes.forEach(r=>{
-    const m=materials.find(x=>
-     String(x.id)===String(r.materialId)
-    );
-
-    if(!m){
-     incomplete=true;
-     return;
-    }
-
-    const price=Number(m.price??m.purchasePrice??m.hargaBeli??0);
-    const packageQty=Number(m.packageQty??m.quantity??m.isiKemasan??0);
-
-    if(price<=0||packageQty<=0){
-     incomplete=true;
-     return;
-    }
-
-    totalHpp+=(price/packageQty)*Number(r.qty)*qty;
-   });
+    const name = item.name || 'Produk';
+    bestProducts[name] = (bestProducts[name] || 0) + qty;
   });
- });
+});
+;
 
  const expenses=getExpenses().filter(e=>
   e.date===today()
@@ -856,7 +827,8 @@ function renderProducts(){
 }
 
 
-function addProduct() {
+
+async function addProduct() {
   const name = document.getElementById('productName').value.trim();
   const price = Number(document.getElementById('productPrice').value);
 
@@ -876,62 +848,92 @@ function addProduct() {
     return alert('Produk dengan nama tersebut sudah tersedia.');
   }
 
-  products.push({
+  const product = {
     id: id(),
     name: name,
     price: price
-  });
+  };
 
-  saveData(PRODUCT_KEY, products);
+  try {
+    const { error } = await supabaseClient
+      .from('products')
+      .insert([product]);
 
-  document.getElementById('productName').value = '';
-  document.getElementById('productPrice').value = '';
+    if (error) throw error;
 
-  renderAll();
+    products.push(product);
+    saveData(PRODUCT_KEY, products);
 
-  alert('Produk berhasil ditambahkan!');
+    document.getElementById('productName').value = '';
+    document.getElementById('productPrice').value = '';
+
+    renderAll();
+
+    alert('Produk berhasil disimpan ke cloud!');
+  } catch (error) {
+    alert('Gagal menyimpan produk: ' + error.message);
+  }
 }
 
 
-function editProduct(productId) {
- const p = products.find(x =>
-  String(x.id) === String(productId)
- );
 
- if (!p) return alert('Produk tidak ditemukan.');
 
- const name = prompt('Nama produk:', productName(p));
- if (name === null) return;
+async function editProduct(productId) {
+  const p = products.find(x =>
+    String(x.id) === String(productId)
+  );
 
- const price = prompt('Harga jual:', productPrice(p));
- if (price === null) return;
+  if (!p) return alert('Produk tidak ditemukan.');
 
- const newName = name.trim();
- const newPrice = Number(price);
+  const name = prompt('Nama produk:', productName(p));
+  if (name === null) return;
 
- if (!newName) return alert('Nama produk tidak boleh kosong.');
+  const price = prompt('Harga jual:', productPrice(p));
+  if (price === null) return;
 
- if (!Number.isFinite(newPrice) || newPrice <= 0) {
-  return alert('Harga jual harus lebih dari 0.');
- }
+  const newName = name.trim();
+  const newPrice = Number(price);
 
- const duplicate = products.find(x =>
-  String(x.id) !== String(productId) &&
-  productName(x).trim().toLowerCase() === newName.toLowerCase()
- );
+  if (!newName) {
+    return alert('Nama produk tidak boleh kosong.');
+  }
 
- if (duplicate) {
-  return alert('Nama produk sudah digunakan produk lain.');
- }
+  if (!Number.isFinite(newPrice) || newPrice <= 0) {
+    return alert('Harga jual harus lebih dari 0.');
+  }
 
- p.name = newName;
- p.price = newPrice;
+  const duplicate = products.find(x =>
+    String(x.id) !== String(productId) &&
+    productName(x).trim().toLowerCase() === newName.toLowerCase()
+  );
 
- saveData(PRODUCT_KEY, products);
- renderAll();
+  if (duplicate) {
+    return alert('Nama produk sudah digunakan produk lain.');
+  }
 
- alert('Produk berhasil diperbarui!');
+  try {
+    const { error } = await supabaseClient
+      .from('products')
+      .update({
+        name: newName,
+        price: newPrice
+      })
+      .eq('id', p.id);
+
+    if (error) throw error;
+
+    p.name = newName;
+    p.price = newPrice;
+
+    saveData(PRODUCT_KEY, products);
+    renderAll();
+
+    alert('Produk berhasil diperbarui dan disimpan ke cloud!');
+  } catch (error) {
+    alert('Gagal memperbarui produk: ' + error.message);
+  }
 }
+
 
 
 function deleteProduct(productId) {
@@ -1015,26 +1017,30 @@ function renderMaterials(){
 }
 
 
-function addMaterial() {
+
+async function addMaterial() {
   const name = document.getElementById('materialName').value.trim();
   const price = Number(document.getElementById('materialPrice').value);
   const packageQty = Number(document.getElementById('materialQuantity').value);
   const unit = document.getElementById('materialUnit').value;
 
   if (!name) return alert('Nama bahan harus diisi.');
-  const duplicate = materials.find(m =>
-  String(m.name).trim().toLowerCase() === name.toLowerCase()
-);
 
-if (duplicate) {
-  return alert(
-    'Bahan "' + duplicate.name +
-    '" sudah tersedia. Silakan gunakan fitur Edit Bahan untuk mengubah stok atau harganya.'
+  const duplicate = materials.find(m =>
+    String(m.name).trim().toLowerCase() === name.toLowerCase()
   );
-}
+
+  if (duplicate) {
+    return alert(
+      'Bahan "' + duplicate.name +
+      '" sudah tersedia. Silakan gunakan fitur Edit Bahan.'
+    );
+  }
+
   if (!Number.isFinite(price) || price <= 0) {
     return alert('Harga beli harus lebih dari 0.');
   }
+
   if (!Number.isFinite(packageQty) || packageQty <= 0) {
     return alert('Isi kemasan harus lebih dari 0.');
   }
@@ -1049,69 +1055,123 @@ if (duplicate) {
     unit: unit
   };
 
-  materials.push(material);
-  saveData(MATERIAL_KEY, materials);
+  try {
+    const { error } = await supabaseClient
+      .from('materials')
+      .insert([{
+        id: material.id,
+        name: material.name,
+        price: material.price,
+        package_qty: material.packageQty,
+        stock: material.stock,
+        minimum: material.minimum,
+        unit: material.unit
+      }]);
 
-  document.getElementById('materialName').value = '';
-  document.getElementById('materialPrice').value = '';
-  document.getElementById('materialQuantity').value = '';
+    if (error) throw error;
 
-  renderAll();
+    materials.push(material);
+    saveData(MATERIAL_KEY, materials);
 
-  alert('Bahan baku berhasil ditambahkan!');
+    document.getElementById('materialName').value = '';
+    document.getElementById('materialPrice').value = '';
+    document.getElementById('materialQuantity').value = '';
+
+    renderAll();
+
+    alert('Bahan baku berhasil disimpan ke cloud!');
+  } catch (error) {
+    alert('Gagal menyimpan bahan baku: ' + error.message);
+  }
 }
 
-function editMaterial(materialId) {
- const m = materials.find(x => String(x.id) === String(materialId));
 
- if (!m) return alert('Bahan tidak ditemukan.');
 
- const name = prompt('Nama bahan:', m.name);
- if (name === null) return;
+async function editMaterial(materialId) {
+  const m = materials.find(x =>
+    String(x.id) === String(materialId)
+  );
 
- const price = prompt(
-  'Harga beli per kemasan (isi 0 jika belum diketahui):',
-  m.price ?? m.purchasePrice ?? m.hargaBeli ?? 0
- );
- if (price === null) return;
+  if (!m) return alert('Bahan tidak ditemukan.');
 
- const packageQty = prompt(
-  'Jumlah isi kemasan:',
-  m.packageQty ?? m.quantity ?? m.isiKemasan ?? 0
- );
- if (packageQty === null) return;
+  const name = prompt('Nama bahan:', m.name);
+  if (name === null) return;
 
- const stock = prompt('Stok tersedia:', m.stock);
- if (stock === null) return;
+  const price = prompt(
+    'Harga beli per kemasan (isi 0 jika belum diketahui):',
+    m.price ?? m.purchasePrice ?? m.hargaBeli ?? 0
+  );
+  if (price === null) return;
 
- const minimum = prompt('Batas stok minimum:', m.minimum ?? 0);
- if (minimum === null) return;
+  const packageQty = prompt(
+    'Jumlah isi kemasan:',
+    m.packageQty ?? m.quantity ?? m.isiKemasan ?? 0
+  );
+  if (packageQty === null) return;
 
- const newPrice = Number(price);
- const newPackageQty = Number(packageQty);
- const newStock = Number(stock);
- const newMinimum = Number(minimum);
+  const stock = prompt('Stok tersedia:', m.stock);
+  if (stock === null) return;
 
- if (!name.trim()) return alert('Nama bahan tidak boleh kosong.');
+  const minimum = prompt('Batas stok minimum:', m.minimum ?? 0);
+  if (minimum === null) return;
 
- if (!Number.isFinite(newPrice) || newPrice < 0 ||
-     !Number.isFinite(newPackageQty) || newPackageQty <= 0 ||
-     !Number.isFinite(newStock) || newStock < 0 ||
-     !Number.isFinite(newMinimum) || newMinimum < 0) {
-  return alert('Data angka tidak valid.');
- }
+  const newName = name.trim();
+  const newPrice = Number(price);
+  const newPackageQty = Number(packageQty);
+  const newStock = Number(stock);
+  const newMinimum = Number(minimum);
 
- m.name = name.trim();
- m.price = newPrice;
- m.packageQty = newPackageQty;
- m.stock = newStock;
- m.minimum = newMinimum;
+  if (!newName) {
+    return alert('Nama bahan tidak boleh kosong.');
+  }
 
- saveData(MATERIAL_KEY, materials);
- renderAll();
+  if (
+    !Number.isFinite(newPrice) || newPrice < 0 ||
+    !Number.isFinite(newPackageQty) || newPackageQty <= 0 ||
+    !Number.isFinite(newStock) || newStock < 0 ||
+    !Number.isFinite(newMinimum) || newMinimum < 0
+  ) {
+    return alert('Data angka tidak valid.');
+  }
 
- alert('Bahan baku berhasil diperbarui!');
+  const duplicate = materials.find(x =>
+    String(x.id) !== String(materialId) &&
+    String(x.name).trim().toLowerCase() === newName.toLowerCase()
+  );
+
+  if (duplicate) {
+    return alert('Nama bahan sudah digunakan bahan lain.');
+  }
+
+  try {
+    const { error } = await supabaseClient
+      .from('materials')
+      .update({
+        name: newName,
+        price: newPrice,
+        package_qty: newPackageQty,
+        stock: newStock,
+        minimum: newMinimum
+      })
+      .eq('id', m.id);
+
+    if (error) throw error;
+
+    m.name = newName;
+    m.price = newPrice;
+    m.packageQty = newPackageQty;
+    m.stock = newStock;
+    m.minimum = newMinimum;
+
+    saveData(MATERIAL_KEY, materials);
+    renderAll();
+
+    alert('Bahan baku berhasil diperbarui dan disimpan ke cloud!');
+  } catch (error) {
+    alert('Gagal memperbarui bahan baku: ' + error.message);
+  }
 }
+
 
 function deleteMaterial(materialId) {
  const m = materials.find(x =>
@@ -1452,7 +1512,16 @@ async function checkout(){
   renderAll();
   updatePayment();
 
-  showReceipt(transaction);
+  const savedTransaction = sales.find(
+  s => String(s.id) === String(transaction.id)
+);
+
+if (!savedTransaction) {
+  alert('Transaksi tersimpan, tetapi data struk belum ditemukan. Muat ulang aplikasi.');
+  return;
+}
+
+showReceipt(savedTransaction);
 
   if(!refreshed){
    alert('Transaksi tersimpan di cloud, tetapi pembaruan tampilan data gagal. Muat ulang aplikasi.');
@@ -1616,7 +1685,8 @@ function formatRupiah(number) {
   return 'Rp' + Number(number || 0).toLocaleString('id-ID');
 }
 
-function addExpense() {
+
+async function addExpense() {
   const date = document.getElementById('expenseDate').value;
   const category = document.getElementById('expenseCategory').value;
   const note = document.getElementById('expenseNote').value.trim();
@@ -1627,39 +1697,86 @@ function addExpense() {
     return;
   }
 
-  const expenses = getExpenses();
+  try {
+    const { data: { user }, error: userError } =
+      await supabaseClient.auth.getUser();
 
-  expenses.push({
-    id: Date.now().toString(),
-    date,
-    category,
-    note,
-    amount
-  });
+    if (userError) throw userError;
+    if (!user) throw new Error('Silakan login kembali.');
 
-  saveExpenses(expenses);
+    const expense = {
+      id: Date.now().toString(),
+      date: date,
+      category: category,
+      note: note,
+      amount: amount,
+      cashier_id: user.id
+    };
 
-  document.getElementById('expenseNote').value = '';
-  document.getElementById('expenseAmount').value = '';
+    const { error } = await supabaseClient
+      .from('expenses')
+      .insert([expense]);
 
-  renderExpenses();
-  alert('Pengeluaran berhasil disimpan!');
+    if (error) throw error;
+
+    const expenses = getExpenses();
+    expenses.push({
+      id: expense.id,
+      date: expense.date,
+      category: expense.category,
+      note: expense.note,
+      amount: expense.amount
+    });
+
+    saveExpenses(expenses);
+
+    document.getElementById('expenseNote').value = '';
+    document.getElementById('expenseAmount').value = '';
+
+    renderExpenses();
+
+    alert('Pengeluaran berhasil disimpan ke cloud!');
+
+  } catch (error) {
+    alert('Gagal menyimpan pengeluaran: ' + error.message);
+  }
 }
 
-function deleteExpense(id) {
+
+
+async function deleteExpense(id) {
   if (!confirm('Hapus catatan pengeluaran ini?')) return;
 
-  const expenses = getExpenses().filter(item => item.id !== id);
-  saveExpenses(expenses);
-  renderExpenses();
+  try {
+    const { error } = await supabaseClient
+      .from('expenses')
+      .delete()
+      .eq('id', String(id));
+
+    if (error) throw error;
+
+    const expenses = getExpenses().filter(
+      item => String(item.id) !== String(id)
+    );
+
+    saveExpenses(expenses);
+    renderExpenses();
+
+    alert('Pengeluaran berhasil dihapus dari cloud!');
+
+  } catch (error) {
+    alert('Gagal menghapus pengeluaran: ' + error.message);
+  }
 }
 
 
-function editExpense(id) {
-  const expenses = getExpenses();
-  const item = expenses.find(x => x.id === id);
 
-  if (!item) return;
+
+async function editExpense(id) {
+  const expenses = getExpenses();
+  const item = expenses.find(x => String(x.id) === String(id));
+
+  if (!item) return alert('Pengeluaran tidak ditemukan.');
 
   const note = prompt('Ubah keterangan:', item.note);
   if (note === null) return;
@@ -1673,23 +1790,49 @@ function editExpense(id) {
   const date = prompt('Ubah tanggal (YYYY-MM-DD):', item.date);
   if (date === null) return;
 
+  const newNote = note.trim();
   const newAmount = Number(amount);
+  const newCategory = category.trim();
 
-  if (!note.trim() || !Number.isFinite(newAmount) || newAmount <= 0 ||
-      !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+  if (
+    !newNote ||
+    !newCategory ||
+    !Number.isFinite(newAmount) ||
+    newAmount <= 0 ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(date)
+  ) {
     alert('Data tidak valid. Pengeluaran belum diubah.');
     return;
   }
 
-  item.note = note.trim();
-  item.amount = newAmount;
-  item.category = category.trim();
-  item.date = date;
+  try {
+    const { error } = await supabaseClient
+      .from('expenses')
+      .update({
+        note: newNote,
+        amount: newAmount,
+        category: newCategory,
+        date: date
+      })
+      .eq('id', String(id));
 
-  saveExpenses(expenses);
-  renderExpenses();
-  alert('Pengeluaran berhasil diperbarui!');
+    if (error) throw error;
+
+    item.note = newNote;
+    item.amount = newAmount;
+    item.category = newCategory;
+    item.date = date;
+
+    saveExpenses(expenses);
+    renderExpenses();
+
+    alert('Pengeluaran berhasil diperbarui dan disimpan ke cloud!');
+
+  } catch (error) {
+    alert('Gagal memperbarui pengeluaran: ' + error.message);
+  }
 }
+
 
 function renderExpenses() {
   const expenses = getExpenses();
@@ -1939,58 +2082,20 @@ function renderProfitReport() {
   );
 
   let omzet = 0;
-  let totalHpp = 0;
-  let incomplete = false;
 
-  monthlySales.forEach(t => {
-    omzet += Number(t.total || 0);
+const totalHpp = monthlySales.reduce(
+  (sum, t) => sum + Number(t.totalHpp || 0),
+  0
+);
 
-    (t.items || []).forEach(item => {
-      const product = products.find(p =>
-        String(p.id) === String(item.productId)
-      );
+const incomplete = monthlySales.some(t =>
+  !Number.isFinite(Number(t.totalHpp)) ||
+  Number(t.totalHpp) <= 0
+);
 
-      if (!product) {
-        incomplete = true;
-        return;
-      }
-
-      const productRecipes = recipes.filter(r =>
-        String(r.productId) === String(product.id)
-      );
-
-      if (!productRecipes.length) {
-        incomplete = true;
-        return;
-      }
-
-      productRecipes.forEach(r => {
-        const m = materials.find(x =>
-          String(x.id) === String(r.materialId)
-        );
-
-        if (!m) {
-          incomplete = true;
-          return;
-        }
-
-        const price = Number(m.price ?? m.purchasePrice ?? m.hargaBeli ?? 0);
-        const packageQty = Number(
-          m.packageQty ?? m.quantity ?? m.isiKemasan ?? 0
-        );
-
-        if (price <= 0 || packageQty <= 0) {
-          incomplete = true;
-          return;
-        }
-
-        totalHpp +=
-          (price / packageQty) *
-          Number(r.qty) *
-          Number(item.qty);
-      });
-    });
-  });
+monthlySales.forEach(t => {
+  omzet += Number(t.total || 0);
+});
 
   const expenseTotal = monthlyExpenses.reduce(
     (sum, e) => sum + Number(e.amount || 0), 0
@@ -2016,8 +2121,8 @@ function renderProfitReport() {
 
   document.getElementById('profitWarning').textContent =
     incomplete
-      ? 'Perhatian: Ada resep atau harga bahan yang belum lengkap. Hasil laba belum akurat.'
-      : 'Perhitungan menggunakan harga bahan dan resep yang tersimpan saat ini.';
+      ? 'Perhatian: Ada transaksi lama yang belum memiliki data HPP tersimpan. Laba belum sepenuhnya akurat.'
+    : 'HPP menggunakan catatan biaya bahan saat transaksi dilakukan.';
 }
 // Perbarui laporan saat bulan diganti
 document.getElementById('reportMonth').addEventListener(
@@ -2050,7 +2155,8 @@ function renderAll(){
 
 // ===== TAMBAH BAHAN KE RESEP =====
 
-function addRecipe() {
+
+async function addRecipe() {
   const productId = document.getElementById('recipeProduct').value;
   const materialId = document.getElementById('recipeMaterial').value;
   const qty = Number(document.getElementById('recipeQty').value);
@@ -2061,8 +2167,13 @@ function addRecipe() {
     return alert('Jumlah pemakaian harus lebih dari 0.');
   }
 
-  const product = products.find(p => String(p.id) === String(productId));
-  const material = materials.find(m => String(m.id) === String(materialId));
+  const product = products.find(p =>
+    String(p.id) === String(productId)
+  );
+
+  const material = materials.find(m =>
+    String(m.id) === String(materialId)
+  );
 
   if (!product || !material) {
     return alert('Produk atau bahan tidak ditemukan.');
@@ -2073,25 +2184,52 @@ function addRecipe() {
     String(r.materialId) === String(materialId)
   );
 
-  if (existing) {
-    existing.qty = qty;
-  } else {
-    recipes.push({
-      id: id(),
-      productId: productId,
-      materialId: materialId,
-      qty: qty
-    });
+  try {
+    if (existing) {
+      const { error } = await supabaseClient
+        .from('recipes')
+        .update({ qty: qty })
+        .eq('id', existing.id);
+
+      if (error) throw error;
+
+      existing.qty = qty;
+
+    } else {
+      const newRecipe = {
+        id: id(),
+        productId: productId,
+        materialId: materialId,
+        qty: qty
+      };
+
+      const { error } = await supabaseClient
+        .from('recipes')
+        .insert([{
+          id: newRecipe.id,
+          product_id: newRecipe.productId,
+          material_id: newRecipe.materialId,
+          qty: newRecipe.qty
+        }]);
+
+      if (error) throw error;
+
+      recipes.push(newRecipe);
+    }
+
+    saveData(RECIPE_KEY, recipes);
+
+    document.getElementById('recipeQty').value = '';
+
+    renderAll();
+
+    alert('Resep berhasil disimpan ke cloud!');
+
+  } catch (error) {
+    alert('Gagal menyimpan resep: ' + error.message);
   }
-
-  saveData(RECIPE_KEY, recipes);
-
-  document.getElementById('recipeQty').value = '';
-
-  renderAll();
-
-  alert('Bahan berhasil dimasukkan ke resep!');
 }
+
 
 
 // ===== HITUNG HPP RESEP =====
@@ -2442,14 +2580,16 @@ async function loadCloudData() {
     }));
 
     const newSales = (s.data || []).map(x => ({
-      id: x.id,
-      date: x.date,
-      items: x.items || [],
-      total: Number(x.total),
-      paymentMethod: x.payment_method,
-      cash: Number(x.cash || 0),
-      change: Number(x.change_amount || 0)
-    }));
+  id: x.id,
+  date: x.date,
+  items: x.items || [],
+  total: Number(x.total),
+  totalHpp: Number(x.total_hpp || 0),
+  profit: Number(x.profit || 0),
+  paymentMethod: x.payment_method,
+  cash: Number(x.cash || 0),
+  change: Number(x.change_amount || 0)
+}));
 
     // Simpan hanya setelah semua data berhasil dibaca
     saveData(PRODUCT_KEY, newProducts);
@@ -2482,7 +2622,6 @@ let cloudRealtime = null;
 let realtimeRefreshTimer = null;
 
 function startCloudRealtime() {
-
   if (cloudRealtime) {
     supabaseClient.removeChannel(cloudRealtime);
     cloudRealtime = null;
@@ -2490,33 +2629,36 @@ function startCloudRealtime() {
 
   cloudRealtime = supabaseClient
     .channel('pop-ice-live-sync')
-
-    .on(
-      'postgres_changes',
-      {
-        event: '*',
-        schema: 'public',
-        table: 'materials'
-      },
-      () => {
-        scheduleCloudRefresh();
-      }
-    )
-
-    .on(
-      'postgres_changes',
-      {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'sales'
-      },
-      () => {
-        scheduleCloudRefresh();
-      }
-    )
-
+    .on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'products'
+    }, () => {
+      scheduleCloudRefresh();
+    })
+    .on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'materials'
+    }, () => {
+      scheduleCloudRefresh();
+    })
+    .on('postgres_changes', {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'sales'
+    }, () => {
+      scheduleCloudRefresh();
+    })
+    .on('postgres_changes', {
+  event: '*',
+  schema: 'public',
+  table: 'recipes'
+}, () => {
+  scheduleCloudRefresh();
+})
     .subscribe();
-}
+      }
 
 function scheduleCloudRefresh() {
 
