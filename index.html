@@ -4,7 +4,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Pop Ice Business 2.0</title>
+<link rel="manifest" href="./manifest.json"> 
+<meta name="theme-color" content="#087cf0"> 
+<meta name="mobile-web-app-capable" content="yes"> 
+<meta name="apple-mobile-web-app-capable" content="yes"> 
+<meta name="apple-mobile-web-app-title" content="Pop Ice Toping">  
+<title>Pop Ice Toping</title>
 <style>
 *{box-sizing:border-box}
 body{margin:0;font-family:Arial,sans-serif;background:#f4f6fb;color:#202638;padding-bottom:85px}
@@ -2741,5 +2746,18 @@ async function migrateLocalDataToSupabase() {
   <h3>Riwayat Pengeluaran</h3>
   <div id="expenseHistory"></div>
 </section>
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", function () {
+    navigator.serviceWorker.register("./sw.js")
+      .then(function () {
+        console.log("Pop Ice Toping siap digunakan");
+      })
+      .catch(function (error) {
+        console.error("Service Worker gagal:", error);
+      });
+  });
+}
+</script>
 </body>
 </html>
