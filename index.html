@@ -13,7 +13,12 @@
 <style>
 *{box-sizing:border-box}
 body{margin:0;font-family:Arial,sans-serif;background:#f4f6fb;color:#202638;padding-bottom:85px}
-header{background:#6546d7;color:white;padding:22px 18px;border-radius:0 0 22px 22px}
+header{background:#087cf0;color:white;padding:22px 18px;border-radius:0 0 22px 22px}
+.header-logout{
+  display:flex;
+  justify-content:flex-end;
+  margin-bottom:12px;
+}
 header h2{margin:0 0 5px}
 header p{margin:0;font-size:13px;opacity:.85}
 main{padding:15px;max-width:650px;margin:auto}
@@ -25,7 +30,7 @@ main{padding:15px;max-width:650px;margin:auto}
 h3{margin:0 0 13px}
 input,select{width:100%;padding:12px;border:1px solid #ddd;border-radius:9px;margin:6px 0 12px;font-size:15px;background:white}
 label{font-size:13px;font-weight:bold;color:#555}
-button{border:0;border-radius:9px;padding:11px 14px;background:#6546d7;color:white;font-weight:bold;font-size:14px;cursor:pointer}
+button{border:0;border-radius:9px;padding:11px 14px;background:#087cf0;color:white;font-weight:bold;font-size:14px;cursor:pointer}
 button.secondary{background:#eee;color:#333}
 button.danger{background:#ffe9e9;color:#c62828}
 button.small{padding:8px 10px;font-size:12px}
@@ -37,13 +42,13 @@ button:disabled{opacity:.45;cursor:not-allowed}
 .muted{color:#777;font-size:13px}
 .nav{position:fixed;bottom:0;left:0;right:0;background:white;display:flex;justify-content:space-around;padding:9px 3px calc(9px + env(safe-area-inset-bottom));box-shadow:0 -3px 15px #00000012;z-index:5}
 .nav button{background:transparent;color:#777;padding:9px 2px;font-size:10px;flex:1}
-.nav button.active{color:#6546d7;background:#f0edff}
+.nav button.active{color:#087cf0;background:#eaf4ff}
 .hidden{display:none!important}
-.notice{background:#f1edff;color:#5135b7;padding:11px;border-radius:9px;font-size:13px;margin-bottom:12px}
+.notice{background:#eaf4ff;color:#0757b8;padding:11px;border-radius:9px;font-size:13px;margin-bottom:12px}
 .empty{color:#888;text-align:center;padding:20px 5px;font-size:13px}
 .rowline{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .badge{font-size:11px;padding:4px 8px;border-radius:20px;background:#eee;color:#555}
-.total{font-size:23px;font-weight:bold;color:#6546d7}
+.total{font-size:23px;font-weight:bold;color:#087cf0}
 .cartrow{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:12px 0;border-bottom:1px solid #eee}
 .cartrow:last-child{border:0}
 .qtycontrols{display:flex;align-items:center;gap:8px}
@@ -126,16 +131,20 @@ button:disabled{opacity:.45;cursor:not-allowed}
 </head>
 <body>
 
+
 <header>
-  <button onclick="logoutUser()">🚪 Keluar</button>
-<h2>🧋 Pop Ice Business 2.0</h2>
-<p>Kasir dan manajemen usaha Pop Ice</p>
+  <div class="header-logout">
+    <button onclick="logoutUser()">🚪 Keluar</button>
+  </div>
+  <h2>🧋 Pop Ice Toping</h2>
+  <p>Segar • Enak • Bikin Happy</p>
 </header>
+
 
 <main>
 <section id="loginPage" class="hidden">
   <div class="card">
-    <h3>🔐 Login Pop Ice Business</h3>
+    <h3>🔐 Login Pop Ice Toping</h3>
 
     <label>Email</label>
     <input
@@ -495,7 +504,7 @@ style="margin-top:14px">
 
   <div class="card">
     <h3>💾 Backup Data Usaha</h3>
-    <p>Simpan seluruh data Pop Ice Business ke dalam HP.</p>
+    <p>Simpan seluruh data Pop Ice Toping ke dalam HP.</p>
 
     <button onclick="backupBusinessData()">
       📥 Download Backup
@@ -520,7 +529,7 @@ style="margin-top:14px">
   
 <div class="card">
   <h3>📂 Restore Data</h3>
-  <p>Pilih file backup Pop Ice Business yang sudah disimpan.</p>
+  <p>Pilih file backup Pop Ice Toping yang sudah disimpan.</p>
 
   <input
     type="file"
@@ -1482,7 +1491,7 @@ function showReceipt(t) {
 
   area.innerHTML = `
     <div class="receipt-paper">
-      <h3>POP ICE BUSINESS</h3>
+      <h3>POP ICE TOPING</h3>
       <div class="receipt-center">STRUK PEMBAYARAN</div>
       <div class="receipt-line"></div>
       <div>No: ${safe(t.id)}</div>
@@ -2193,7 +2202,7 @@ renderAll();
 // ===== FASE 6: BACKUP & RESTORE =====
 
 
-// ===== BACKUP POP ICE BUSINESS =====
+// ===== BACKUP POP ICE TOPING =====
 
 
 function backupBusinessData() {
