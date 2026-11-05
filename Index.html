@@ -1,0 +1,2745 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pop Ice Business 2.0</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:#f4f6fb;color:#202638;padding-bottom:85px}
+header{background:#6546d7;color:white;padding:22px 18px;border-radius:0 0 22px 22px}
+header h2{margin:0 0 5px}
+header p{margin:0;font-size:13px;opacity:.85}
+main{padding:15px;max-width:650px;margin:auto}
+.card{background:white;border-radius:15px;padding:15px;margin-bottom:13px;box-shadow:0 3px 12px #00000009}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat{background:white;padding:14px;border-radius:13px}
+.stat small{color:#777}
+.stat strong{display:block;font-size:22px;margin-top:7px}
+h3{margin:0 0 13px}
+input,select{width:100%;padding:12px;border:1px solid #ddd;border-radius:9px;margin:6px 0 12px;font-size:15px;background:white}
+label{font-size:13px;font-weight:bold;color:#555}
+button{border:0;border-radius:9px;padding:11px 14px;background:#6546d7;color:white;font-weight:bold;font-size:14px;cursor:pointer}
+button.secondary{background:#eee;color:#333}
+button.danger{background:#ffe9e9;color:#c62828}
+button.small{padding:8px 10px;font-size:12px}
+button:disabled{opacity:.45;cursor:not-allowed}
+.actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+.item{border-bottom:1px solid #eee;padding:12px 0}
+.item:last-child{border:0}
+.item strong{display:block;margin-bottom:4px}
+.muted{color:#777;font-size:13px}
+.nav{position:fixed;bottom:0;left:0;right:0;background:white;display:flex;justify-content:space-around;padding:9px 3px calc(9px + env(safe-area-inset-bottom));box-shadow:0 -3px 15px #00000012;z-index:5}
+.nav button{background:transparent;color:#777;padding:9px 2px;font-size:10px;flex:1}
+.nav button.active{color:#6546d7;background:#f0edff}
+.hidden{display:none!important}
+.notice{background:#f1edff;color:#5135b7;padding:11px;border-radius:9px;font-size:13px;margin-bottom:12px}
+.empty{color:#888;text-align:center;padding:20px 5px;font-size:13px}
+.rowline{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.badge{font-size:11px;padding:4px 8px;border-radius:20px;background:#eee;color:#555}
+.total{font-size:23px;font-weight:bold;color:#6546d7}
+.cartrow{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:12px 0;border-bottom:1px solid #eee}
+.cartrow:last-child{border:0}
+.qtycontrols{display:flex;align-items:center;gap:8px}
+.qtycontrols button{padding:6px 10px}
+.receipt{background:#fafafa;border:1px dashed #ccc;border-radius:10px;padding:13px}
+/* STRUK THERMAL 58 MM */
+.receipt-paper {
+  width: 48mm;
+  max-width: 48mm;
+  box-sizing: border-box;
+  background: white;
+  color: black;
+  padding: 1mm;
+  margin: 0 auto;
+  font-family: monospace;
+  font-size: 10px;
+  line-height: 1.5;
+  overflow-wrap: break-word;
+}
+
+.receipt-paper h3 {
+  text-align: center;
+  margin: 0 0 5px;
+}
+
+.receipt-center {
+  text-align: center;
+}
+
+.receipt-line {
+  border-top: 1px dashed black;
+  margin: 6px 0;
+}
+
+.receipt-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 5px;
+}
+
+.receipt-total {
+  font-weight: bold;
+  font-size: 13px;
+}
+
+.receipt-actions {
+  display: flex;
+  gap: 8px;
+  margin: 10px 0;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  #receiptArea,
+  #receiptArea * {
+    visibility: visible;
+  }
+
+  #receiptArea {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 48mm;
+    background: white;
+  }
+
+  .receipt-actions {
+    display: none !important;
+  }
+
+  .receipt-paper {
+    margin: 0;
+    width: 58mm;
+  }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <button onclick="logoutUser()">🚪 Keluar</button>
+<h2>🧋 Pop Ice Business 2.0</h2>
+<p>Kasir dan manajemen usaha Pop Ice</p>
+</header>
+
+<main>
+<section id="loginPage" class="hidden">
+  <div class="card">
+    <h3>🔐 Login Pop Ice Business</h3>
+
+    <label>Email</label>
+    <input
+      type="email"
+      id="loginEmail"
+      placeholder="Masukkan email"
+    >
+
+    <label>Password</label>
+    <input
+      type="password"
+      id="loginPassword"
+      placeholder="Masukkan password"
+    >
+
+    <button onclick="loginUser()">
+      Masuk Aplikasi
+    </button>
+
+    <p id="loginMessage" class="muted"></p>
+  </div>
+</section>
+
+<section id="dashboard">
+<div class="stats">
+<div class="stat"><small>Total Produk</small><strong id="totalProducts">0</strong></div>
+<div class="stat"><small>Total Bahan</small><strong id="totalMaterials">0</strong></div>
+<div class="stat"><small>Transaksi Hari Ini</small><strong id="todayTransactions">0</strong></div>
+<div class="stat"><small>Penjualan Hari Ini</small><strong id="todayRevenue">Rp0</strong></div>
+</div>
+<div class="card" style="margin-top:14px">
+  <h3>💰 Keuangan Hari Ini</h3>
+
+  <div class="rowline">
+    <span>Laba Bersih</span>
+    <strong id="todayProfit" style="color:#16834a">Rp0</strong>
+  </div>
+
+  <div class="rowline">
+    <span>Produk Terjual</span>
+    <strong id="todayProductQty">0</strong>
+  </div>
+
+  <hr>
+
+  <h3>🏆 Produk Terlaris Hari Ini</h3>
+  <div id="todayBestProduct">Belum ada penjualan.</div>
+</div>
+<div class="card" style="margin-top:14px">
+  <h3>📈 Grafik Omzet 7 Hari Terakhir</h3>
+  <div id="salesChart"
+       style="display:flex;align-items:flex-end;justify-content:space-around;gap:8px;height:190px;padding:15px 5px 5px">
+  </div>
+</div>
+<div class="card" style="margin-top:14px">
+  <h3>Selamat datang!</h3>
+<div class="card" 
+style="margin-top:14px">
+<h3>Selamat datang!</h3>
+<p class="muted">Kelola penjualan dan pantau stok bahan baku dari satu aplikasi.</p>
+<button onclick="showPage('sales')">🛒 Mulai Transaksi</button>
+</div>
+<div class="card">
+<h3>Informasi</h3>
+<div class="notice">Stok bahan akan berkurang setelah transaksi berhasil dibayar. Transaksi yang gagal tidak akan mengurangi stok.</div>
+</div>
+</section>
+
+
+<section id="products" class="hidden">
+  <div class="card">
+    <h3>➕ Tambah Produk</h3>
+
+    <label>Nama Produk</label>
+    <input type="text" id="productName" placeholder="Contoh: Pop Ice Cokelat">
+
+    <label>Harga Jual</label>
+    <input type="number" id="productPrice" placeholder="Contoh: 5000">
+
+    <button onclick="addProduct()">Simpan Produk</button>
+  </div>
+
+  <div class="card">
+    <h3>Daftar Produk</h3>
+    <div id="productList"></div>
+  </div>
+</section>
+
+
+<section id="materials" class="hidden">
+
+  <div class="card">
+    <h3>➕ Tambah Bahan Baku</h3>
+
+    <label>Nama Bahan</label>
+    <input
+      type="text"
+      id="materialName"
+      placeholder="Contoh: Susu Kental Manis"
+    >
+
+    <label>Harga Beli</label>
+    <input
+      type="number"
+      id="materialPrice"
+      placeholder="Contoh: 15000"
+    >
+
+    <label>Jumlah Isi Kemasan</label>
+    <input
+      type="number"
+      id="materialQuantity"
+      placeholder="Contoh: 500"
+    >
+
+    <label>Satuan</label>
+    <select id="materialUnit">
+      <option value="gram">Gram</option>
+      <option value="ml">Mililiter (ml)</option>
+      <option value="pcs">Pcs</option>
+      <option value="sachet">Sachet</option>
+    </select>
+
+    <button onclick="addMaterial()">
+      Simpan Bahan
+    </button>
+  </div>
+
+  <div class="card">
+    <h3>📦 Daftar Bahan Baku</h3>
+    <div id="materialList"></div>
+  </div>
+
+</section>
+
+
+
+<section id="recipes" class="hidden">
+
+  <div class="card">
+    <h3>🧋 Buat Resep Produk</h3>
+
+    <label>Pilih Produk</label>
+    <select id="recipeProduct">
+      <option value="">-- Pilih produk --</option>
+    </select>
+
+    <label>Pilih Bahan Baku</label>
+    <select id="recipeMaterial">
+      <option value="">-- Pilih bahan --</option>
+    </select>
+
+    <label>Jumlah Pemakaian</label>
+    <input
+      type="number"
+      id="recipeQty"
+      placeholder="Contoh: 20"
+      min="0.01"
+      step="any"
+    >
+
+    <button onclick="addRecipe()">
+      ➕ Tambahkan Bahan ke Resep
+    </button>
+
+    <p class="muted">
+      Satu produk bisa menggunakan beberapa bahan baku.
+    </p>
+  </div>
+
+  <div class="card">
+    <h3>📋 Daftar Resep</h3>
+    <div id="recipeList"></div>
+  </div>
+
+  <div class="card">
+    <h3>💰 Perhitungan HPP</h3>
+    <div id="recipeHpp">
+      Pilih produk untuk melihat HPP.
+    </div>
+  </div>
+
+</section>
+
+
+<section id="sales" class="hidden">
+<div class="card">
+<h3>🛒 Pilih Produk</h3>
+<label>Produk</label>
+<select id="saleProduct"></select>
+<div id="selectedProductInfo" class="muted"></div>
+<label>Jumlah</label>
+<input id="saleQuantity" type="number" min="1" step="1" value="1">
+<button onclick="addToCart()">+ Masukkan Keranjang</button>
+</div>
+
+<div class="card">
+<h3>Keranjang Belanja</h3>
+<div id="cartList"></div>
+<div class="rowline" style="margin-top:12px">
+<strong>Total Belanja</strong>
+<span class="total" id="cartTotal">Rp0</span>
+</div>
+</div>
+
+<div class="card">
+<h3>💵 Pembayaran</h3>
+<label>Metode Pembayaran</label>
+<select id="paymentMethod" onchange="updatePayment()">
+  <option value="Tunai">Tunai</option>
+  <option value="QRIS">QRIS</option>
+  <option value="Transfer Bank">Transfer Bank</option>
+</select>
+<label id="paymentAmountLabel">Uang diterima dari pelanggan (Rp)</label>
+<input id="cashReceived" type="number" min="0" step="1" placeholder="Contoh: 20000" oninput="updatePayment()">
+<div class="rowline">
+<span class="muted">Total belanja</span>
+<strong id="paymentTotal">Rp0</strong>
+</div>
+<div class="rowline" style="margin-top:10px">
+<span class="muted">Kembalian</span>
+<strong class="total" id="changeAmount">Rp0</strong>
+</div>
+<div class="actions">
+<button style="flex:1" onclick="checkout()">Bayar Sekarang</button>
+<button class="secondary" onclick="clearCart()">Kosongkan</button>
+</div>
+<div id="paymentMessage" class="muted" style="margin-top:10px"></div>
+</div>
+</section>
+
+<section id="history" class="hidden">
+
+  <div id="receiptArea" class="hidden"></div>
+
+  <div class="card">
+    <h3>📒 Riwayat Transaksi</h3>
+    <div id="salesHistory"></div>
+  </div>
+
+</section>
+
+<!-- HALAMAN LAPORAN PENGELUARAN -->
+<section id="report" class="hidden">
+<div class="card">
+  <h3>📊 Laporan Penjualan</h3>
+
+  <label>Pilih Bulan Penjualan</label>
+  <input
+    type="month"
+    id="salesReportMonth"
+    onchange="renderSalesReport()"
+    style="width:100%;padding:10px;margin:8px 0"
+  >
+
+  <h3>Total Omzet</h3>
+  <div id="salesReportTotal"
+       style="font-size:26px;font-weight:bold;color:#16834a">
+    Rp0
+  </div>
+
+  <hr>
+
+  <div class="rowline">
+    <span>Jumlah Transaksi</span>
+    <strong id="salesReportCount">0</strong>
+  </div>
+
+  <div class="rowline">
+    <span>Total Produk Terjual</span>
+    <strong id="salesReportQty">0</strong>
+  </div>
+</div>
+
+<div class="card">
+  <h3>💳 Penjualan Berdasarkan Pembayaran</h3>
+  <div id="salesReportPayment"></div>
+</div>
+<div class="card">
+  <h3>🏆 Penjualan Berdasarkan Produk</h3>
+  <div id="salesReportProducts">
+    Belum ada data penjualan.
+  </div>
+</div>
+
+<div class="card">
+  <h3>💰 Laporan Keuntungan</h3>
+
+  <div class="rowline">
+    <span>Total Omzet</span>
+    <strong id="profitOmzet">Rp0</strong>
+  </div>
+
+  <div class="rowline">
+    <span>Total HPP</span>
+    <strong id="profitHpp">Rp0</strong>
+  </div>
+
+  <hr>
+
+  <div class="rowline">
+    <strong>Laba Kotor</strong>
+    <strong id="profitGross">Rp0</strong>
+  </div>
+
+  <div class="rowline">
+    <span>Pengeluaran Operasional</span>
+    <strong id="profitExpense">Rp0</strong>
+  </div>
+
+  <hr>
+
+  <div class="rowline">
+    <strong>ESTIMASI LABA BERSIH</strong>
+    <strong id="profitNet" style="color:#16834a">
+      Rp0
+    </strong>
+  </div>
+
+  <p id="profitWarning" class="muted"></p>
+</div>
+</div>
+  <div class="card">
+    <h3>📊 Laporan Pengeluaran</h3>
+
+    <label>Pilih Bulan</label>
+    <input type="month" id="reportMonth" style="width:100%;padding:10px;margin:8px 0">
+
+    <h3>Total Pengeluaran Bulan Ini</h3>
+    <div id="reportTotal" style="font-size:26px;font-weight:bold;color:#16834a">
+      Rp0
+    </div>
+
+    <hr>
+
+    <h3>Bulan Sebelumnya</h3>
+    <div id="reportPrevious" style="font-size:20px;font-weight:bold">
+      Rp0
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>📂 Pengeluaran Berdasarkan Kategori</h3>
+    <div id="reportCategory"></div>
+  </div>
+
+  <div class="card">
+    <h3>📋 Rincian Pengeluaran</h3>
+    <div id="reportHistory"></div>
+  </div>
+
+
+</section>
+
+<!-- FASE 6: BACKUP & RESTORE -->
+<section id="backup" class="hidden">
+
+  <div class="card">
+    <h3>💾 Backup Data Usaha</h3>
+    <p>Simpan seluruh data Pop Ice Business ke dalam HP.</p>
+
+    <button onclick="backupBusinessData()">
+      📥 Download Backup
+    </button>
+  </div>
+<div class="card">
+  <h3>☁️ Sinkronisasi Supabase</h3>
+  <p>
+    Kirim produk, bahan baku, resep, transaksi,
+    dan pengeluaran ke database cloud.
+  </p>
+
+  <button onclick="migrateLocalDataToSupabase()">
+    ☁️ Migrasikan Data ke Supabase
+  </button>
+
+  <p style="color:#b45309;font-size:12px">
+    Jalankan hanya dari akun Pemilik. Jangan tutup aplikasi
+    selama proses migrasi.
+  </p>
+</div>
+  
+<div class="card">
+  <h3>📂 Restore Data</h3>
+  <p>Pilih file backup Pop Ice Business yang sudah disimpan.</p>
+
+  <input
+    type="file"
+    id="backupFile"
+    accept=".json,application/json"
+  >
+
+  <button onclick="restoreBusinessData()">
+    ♻️ Pulihkan Data
+  </button>
+
+  <p style="color:#b45309;font-size:12px">
+    Perhatian: Restore akan mengganti data aplikasi saat ini.
+  </p>
+</div>
+
+
+</section>
+
+</main>
+
+
+
+
+<nav class="nav">
+<button id="nav-dashboard" class="active" onclick="showPage('dashboard')">🏠<br>Beranda</button>
+<button id="nav-sales" onclick="showPage('sales')">🛒<br>Kasir</button>
+<button id="nav-products" onclick="showPage('products')">🧋<br>Produk</button>
+<button id="nav-materials" onclick="showPage('materials')">📦<br>Bahan</button>
+<button id="nav-recipes" onclick="showPage('recipes')">📋<br>Resep</button>
+<button id="nav-history" onclick="showPage('history')">📒<br>Riwayat</button>
+<button id="nav-expenseSection" onclick="showPage('expenseSection')">💸<br>Pengeluaran</button>
+<button id="nav-backup" onclick="showPage('backup')">💾<br>Backup</button>
+<button id="nav-report" onclick="showPage('report')">📊<br>Laporan</button>
+</nav>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script>
+// KONEKSI SUPABASE
+const SUPABASE_URL = 'https://ihaceqkwjjomkypqcthg.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_et9pIIYA2mO2ksczDgXLuA_ZUdkXVCm';
+
+const supabaseClient = window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_KEY
+);
+const PRODUCT_KEY='popIceProducts';
+const MATERIAL_KEY='popIceMaterials';
+const RECIPE_KEY='popIceRecipes';
+const SALES_KEY='popIceSales';
+
+function readData(key){
+ try{
+  const data=JSON.parse(localStorage.getItem(key));
+  return Array.isArray(data)?data:[];
+ }catch(e){return [];}
+}
+function saveData(key,data){
+ localStorage.setItem(key,JSON.stringify(data));
+}
+let products=readData(PRODUCT_KEY);
+let materials=readData(MATERIAL_KEY);
+let recipes=readData(RECIPE_KEY);
+let sales=readData(SALES_KEY);
+let cart=[];
+
+function id(){
+ return Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+}
+function safe(s){
+ return String(s??'').replace(/[&<>"']/g,c=>({
+ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+ }[c]));
+}
+function productName(p){
+ return p.name||p.nama||p.productName||'Produk';
+}
+function productPrice(p){
+ return Number(p.price??p.harga??0);
+}
+function money(n){
+ return 'Rp'+Number(n||0).toLocaleString('id-ID');
+}
+function dateKey(d){
+ return new Date(d).toLocaleDateString('en-CA');
+}
+function today(){
+ return dateKey(new Date());
+}
+
+function applyRoleAccess() {
+  const ownerPages = [
+    'products',
+    'materials',
+    'recipes',
+    'report',
+    'expenseSection',
+    'backup'
+  ];
+
+  ownerPages.forEach(page => {
+    const nav = document.getElementById('nav-' + page);
+
+    if (nav) {
+      nav.style.display =
+        currentRole === 'owner' ? '' : 'none';
+    }
+  });
+}
+
+function showPage(page){
+    // Batasi halaman khusus pemilik
+  const ownerOnlyPages = [
+    'products',
+    'materials',
+    'recipes',
+    'report',
+    'expenseSection',
+    'backup'
+  ];
+
+  if (currentRole === 'cashier' && ownerOnlyPages.includes(page)) {
+    alert('Akses ditolak! Menu ini hanya untuk pemilik.');
+    page = 'dashboard';
+  }
+ ['dashboard','sales','products','materials','recipes','history','report','expenseSection','backup'].forEach(p=>{
+  const section=document.getElementById(p);
+  const nav=document.getElementById('nav-'+p);
+  if(section)section.classList.toggle('hidden',p!==page);
+  if(nav)nav.classList.toggle('active',p===page);
+ });
+
+ renderAll();
+
+ if(page==='report'){
+  renderExpenseReport();
+  renderSalesReport();
+}
+
+ if(page==='expenseSection'){
+  renderExpenses();
+ }
+}
+
+
+function renderDashboard(){
+ const todays=sales.filter(s=>dateKey(s.date)===today());
+
+ document.getElementById('totalProducts').textContent=products.length;
+ document.getElementById('totalMaterials').textContent=materials.length;
+ document.getElementById('todayTransactions').textContent=todays.length;
+
+ const omzet=todays.reduce(
+  (sum,s)=>sum+Number(s.total||0),0
+ );
+
+ document.getElementById('todayRevenue').textContent=money(omzet);
+
+ let totalHpp=0;
+ let totalQty=0;
+ let incomplete=false;
+ const bestProducts={};
+
+ todays.forEach(t=>{
+  (t.items||[]).forEach(item=>{
+   const qty=Number(item.qty||0);
+   totalQty+=qty;
+
+   const name=item.name||'Produk';
+   bestProducts[name]=(bestProducts[name]||0)+qty;
+
+   const product=products.find(p=>
+    String(p.id)===String(item.productId)
+   );
+
+   if(!product){
+    incomplete=true;
+    return;
+   }
+
+   const productRecipes=recipes.filter(r=>
+    String(r.productId)===String(product.id)
+   );
+
+   if(!productRecipes.length){
+    incomplete=true;
+    return;
+   }
+
+   productRecipes.forEach(r=>{
+    const m=materials.find(x=>
+     String(x.id)===String(r.materialId)
+    );
+
+    if(!m){
+     incomplete=true;
+     return;
+    }
+
+    const price=Number(m.price??m.purchasePrice??m.hargaBeli??0);
+    const packageQty=Number(m.packageQty??m.quantity??m.isiKemasan??0);
+
+    if(price<=0||packageQty<=0){
+     incomplete=true;
+     return;
+    }
+
+    totalHpp+=(price/packageQty)*Number(r.qty)*qty;
+   });
+  });
+ });
+
+ const expenses=getExpenses().filter(e=>
+  e.date===today()
+ );
+
+ const expenseTotal=expenses.reduce(
+  (sum,e)=>sum+Number(e.amount||0),0
+ );
+
+ const profit=omzet-totalHpp-expenseTotal;
+
+ document.getElementById('todayProfit').textContent=
+  incomplete?'Belum lengkap':money(profit);
+
+ document.getElementById('todayProductQty').textContent=totalQty;
+
+ const bestBox=document.getElementById('todayBestProduct');
+
+ const bestEntries=Object.entries(bestProducts)
+  .sort((a,b)=>b[1]-a[1]);
+
+ if(!bestEntries.length){
+  bestBox.innerHTML='<p>Belum ada penjualan hari ini.</p>';
+ }else{
+  bestBox.innerHTML=bestEntries.slice(0,3).map(([name,qty],index)=>`
+   <div class="rowline" style="padding:8px 0;border-bottom:1px solid #ddd">
+    <strong>${index+1}. ${safe(name)}</strong>
+    <strong>${qty} terjual</strong>
+   </div>
+  `).join('');
+ }
+
+ if(incomplete){
+  document.getElementById('todayProfit').title=
+   'Periksa resep dan harga bahan. Laba belum akurat.';
+ }
+  renderSalesChart();
+}
+function renderSalesChart() {
+  const box = document.getElementById('salesChart');
+  if (!box) return;
+
+  const allSales = readData(SALES_KEY);
+  const days = [];
+
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+
+    const key = dateKey(d);
+    const omzet = allSales
+      .filter(s => s.date && dateKey(s.date) === key)
+      .reduce((sum, s) => sum + Number(s.total || 0), 0);
+
+    days.push({
+      label: d.toLocaleDateString('id-ID', {
+        weekday: 'short'
+      }),
+      omzet
+    });
+  }
+
+  const max = Math.max(...days.map(d => d.omzet), 1);
+
+  box.innerHTML = days.map(d => {
+    const height = Math.max((d.omzet / max) * 130, 3);
+
+    return `
+      <div style="flex:1;text-align:center;min-width:0">
+        <div style="font-size:10px;margin-bottom:5px">
+          ${d.omzet > 0 ? money(d.omzet) : 'Rp0'}
+        </div>
+        <div style="
+          height:${height}px;
+          background:#16834a;
+          border-radius:6px 6px 0 0;
+          width:100%;
+        "></div>
+        <div style="font-size:11px;margin-top:6px">
+          ${d.label}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderProducts(){
+ const el=document.getElementById('productList');
+
+ if(!products.length){
+  el.innerHTML='<div class="empty">Belum ada produk.</div>';
+  return;
+ }
+
+ el.innerHTML=products.map(p=>`
+  <div class="item">
+   <div class="rowline">
+    <strong>${safe(productName(p))}</strong>
+    <b>${money(productPrice(p))}</b>
+   </div>
+
+   <div class="rowline">
+ <button onclick="editProduct('${safe(p.id)}')">
+  ✏️ Edit
+ </button>
+
+ <button onclick="deleteProduct('${safe(p.id)}')">
+  🗑️ Hapus
+ </button>
+</div>
+ `).join('');
+}
+
+
+function addProduct() {
+  const name = document.getElementById('productName').value.trim();
+  const price = Number(document.getElementById('productPrice').value);
+
+  if (!name) {
+    return alert('Nama produk harus diisi.');
+  }
+
+  if (!Number.isFinite(price) || price <= 0) {
+    return alert('Harga jual harus lebih dari 0.');
+  }
+
+  const duplicate = products.find(p =>
+    String(productName(p)).trim().toLowerCase() === name.toLowerCase()
+  );
+
+  if (duplicate) {
+    return alert('Produk dengan nama tersebut sudah tersedia.');
+  }
+
+  products.push({
+    id: id(),
+    name: name,
+    price: price
+  });
+
+  saveData(PRODUCT_KEY, products);
+
+  document.getElementById('productName').value = '';
+  document.getElementById('productPrice').value = '';
+
+  renderAll();
+
+  alert('Produk berhasil ditambahkan!');
+}
+
+
+function editProduct(productId) {
+ const p = products.find(x =>
+  String(x.id) === String(productId)
+ );
+
+ if (!p) return alert('Produk tidak ditemukan.');
+
+ const name = prompt('Nama produk:', productName(p));
+ if (name === null) return;
+
+ const price = prompt('Harga jual:', productPrice(p));
+ if (price === null) return;
+
+ const newName = name.trim();
+ const newPrice = Number(price);
+
+ if (!newName) return alert('Nama produk tidak boleh kosong.');
+
+ if (!Number.isFinite(newPrice) || newPrice <= 0) {
+  return alert('Harga jual harus lebih dari 0.');
+ }
+
+ const duplicate = products.find(x =>
+  String(x.id) !== String(productId) &&
+  productName(x).trim().toLowerCase() === newName.toLowerCase()
+ );
+
+ if (duplicate) {
+  return alert('Nama produk sudah digunakan produk lain.');
+ }
+
+ p.name = newName;
+ p.price = newPrice;
+
+ saveData(PRODUCT_KEY, products);
+ renderAll();
+
+ alert('Produk berhasil diperbarui!');
+}
+
+
+function deleteProduct(productId) {
+ const p = products.find(x =>
+  String(x.id) === String(productId)
+ );
+
+ if (!p) return alert('Produk tidak ditemukan.');
+
+ const usedInRecipe = recipes.some(r =>
+  String(r.productId) === String(productId)
+ );
+
+ if (usedInRecipe) {
+  return alert(
+   'Produk "' + productName(p) +
+   '" masih memiliki resep. Hapus atau pindahkan resepnya terlebih dahulu.'
+  );
+ }
+
+ const usedInSales = sales.some(transaction =>
+  (transaction.items || []).some(item =>
+   String(item.productId) === String(productId)
+  )
+ );
+
+ if (usedInSales) {
+  return alert(
+   'Produk "' + productName(p) +
+   '" sudah tercatat dalam riwayat transaksi dan tidak dapat dihapus.'
+  );
+ }
+
+ if (!confirm(
+  'Yakin ingin menghapus produk "' + productName(p) + '"?'
+ )) return;
+
+ products = products.filter(x =>
+  String(x.id) !== String(productId)
+ );
+
+ saveData(PRODUCT_KEY, products);
+ renderAll();
+
+ alert('Produk berhasil dihapus.');
+}
+
+function renderMaterials(){
+ const el=document.getElementById('materialList');
+
+ if(!materials.length){
+  el.innerHTML='<div class="empty">Belum ada bahan baku.</div>';
+  return;
+ }
+
+ el.innerHTML=materials.map(m=>{
+  const low=Number(m.stock)<=Number(m.minimum);
+  const price=Number(m.price ?? m.purchasePrice ?? m.hargaBeli ?? 0);
+  const packageQty=Number(m.packageQty ?? m.quantity ?? m.isiKemasan ?? 0);
+
+  return `<div class="item">
+   <div class="rowline">
+    <strong>${safe(m.name)}</strong>
+    <span class="badge">${low?'Stok menipis':'Tersedia'}</span>
+   </div>
+
+   <div class="muted">Harga beli: <b>${money(price)}</b></div>
+   <div class="muted">Isi kemasan: <b>${packageQty} ${safe(m.unit)}</b></div>
+   <div class="muted">Stok tersedia: <b>${m.stock} ${safe(m.unit)}</b></div>
+
+   <div class="rowline">
+ <button onclick="editMaterial('${safe(m.id)}')">
+  ✏️ Edit
+ </button>
+
+ <button onclick="deleteMaterial('${safe(m.id)}')">
+  🗑️ Hapus
+ </button>
+</div>`;
+ }).join('');
+}
+
+
+function addMaterial() {
+  const name = document.getElementById('materialName').value.trim();
+  const price = Number(document.getElementById('materialPrice').value);
+  const packageQty = Number(document.getElementById('materialQuantity').value);
+  const unit = document.getElementById('materialUnit').value;
+
+  if (!name) return alert('Nama bahan harus diisi.');
+  const duplicate = materials.find(m =>
+  String(m.name).trim().toLowerCase() === name.toLowerCase()
+);
+
+if (duplicate) {
+  return alert(
+    'Bahan "' + duplicate.name +
+    '" sudah tersedia. Silakan gunakan fitur Edit Bahan untuk mengubah stok atau harganya.'
+  );
+}
+  if (!Number.isFinite(price) || price <= 0) {
+    return alert('Harga beli harus lebih dari 0.');
+  }
+  if (!Number.isFinite(packageQty) || packageQty <= 0) {
+    return alert('Isi kemasan harus lebih dari 0.');
+  }
+
+  const material = {
+    id: id(),
+    name: name,
+    price: price,
+    packageQty: packageQty,
+    stock: packageQty,
+    minimum: 0,
+    unit: unit
+  };
+
+  materials.push(material);
+  saveData(MATERIAL_KEY, materials);
+
+  document.getElementById('materialName').value = '';
+  document.getElementById('materialPrice').value = '';
+  document.getElementById('materialQuantity').value = '';
+
+  renderAll();
+
+  alert('Bahan baku berhasil ditambahkan!');
+}
+
+function editMaterial(materialId) {
+ const m = materials.find(x => String(x.id) === String(materialId));
+
+ if (!m) return alert('Bahan tidak ditemukan.');
+
+ const name = prompt('Nama bahan:', m.name);
+ if (name === null) return;
+
+ const price = prompt(
+  'Harga beli per kemasan (isi 0 jika belum diketahui):',
+  m.price ?? m.purchasePrice ?? m.hargaBeli ?? 0
+ );
+ if (price === null) return;
+
+ const packageQty = prompt(
+  'Jumlah isi kemasan:',
+  m.packageQty ?? m.quantity ?? m.isiKemasan ?? 0
+ );
+ if (packageQty === null) return;
+
+ const stock = prompt('Stok tersedia:', m.stock);
+ if (stock === null) return;
+
+ const minimum = prompt('Batas stok minimum:', m.minimum ?? 0);
+ if (minimum === null) return;
+
+ const newPrice = Number(price);
+ const newPackageQty = Number(packageQty);
+ const newStock = Number(stock);
+ const newMinimum = Number(minimum);
+
+ if (!name.trim()) return alert('Nama bahan tidak boleh kosong.');
+
+ if (!Number.isFinite(newPrice) || newPrice < 0 ||
+     !Number.isFinite(newPackageQty) || newPackageQty <= 0 ||
+     !Number.isFinite(newStock) || newStock < 0 ||
+     !Number.isFinite(newMinimum) || newMinimum < 0) {
+  return alert('Data angka tidak valid.');
+ }
+
+ m.name = name.trim();
+ m.price = newPrice;
+ m.packageQty = newPackageQty;
+ m.stock = newStock;
+ m.minimum = newMinimum;
+
+ saveData(MATERIAL_KEY, materials);
+ renderAll();
+
+ alert('Bahan baku berhasil diperbarui!');
+}
+
+function deleteMaterial(materialId) {
+ const m = materials.find(x =>
+  String(x.id) === String(materialId)
+ );
+
+ if (!m) return alert('Bahan tidak ditemukan.');
+
+ const usedInRecipe = recipes.some(r =>
+  String(r.materialId) === String(materialId)
+ );
+
+ if (usedInRecipe) {
+  return alert(
+   'Bahan "' + m.name +
+   '" masih digunakan dalam resep. Hapus atau ganti bahan pada resep terlebih dahulu.'
+  );
+ }
+
+ if (!confirm(
+  'Yakin ingin menghapus bahan "' + m.name + '"?'
+ )) return;
+
+ materials = materials.filter(x =>
+  String(x.id) !== String(materialId)
+ );
+
+ saveData(MATERIAL_KEY, materials);
+ renderAll();
+
+ alert('Bahan berhasil dihapus.');
+}
+
+
+
+function renderRecipes() {
+  const el = document.getElementById('recipeList');
+
+  if (!recipes.length) {
+    el.innerHTML = '<div class="empty">Belum ada resep.</div>';
+    return;
+  }
+
+  const groups = {};
+
+  recipes.forEach(r => {
+    if (!groups[r.productId]) groups[r.productId] = [];
+    groups[r.productId].push(r);
+  });
+
+  el.innerHTML = Object.keys(groups).map(pid => {
+    const p = products.find(x => String(x.id) === String(pid));
+
+    return `<div class="item">
+      <strong>${safe(p ? productName(p) : 'Produk tidak ditemukan')}</strong>
+
+      ${groups[pid].map(r => {
+        const m = materials.find(x => String(x.id) === String(r.materialId));
+
+        return `<div class="rowline">
+          <span>${safe(m ? m.name : 'Bahan tidak ditemukan')}: ${r.qty} ${safe(m ? m.unit : '')}</span>
+          <button onclick="deleteRecipe('${safe(r.id || '')}')">Hapus</button>
+        </div>`;
+      }).join('')}
+    </div>`;
+  }).join('');
+
+  renderRecipeHpp();
+}
+
+
+function renderProductOptions(){
+ const select=document.getElementById('saleProduct');
+ const old=select.value;
+ select.innerHTML='<option value="">-- Pilih produk --</option>'+
+  products.map(p=>`<option value="${safe(p.id)}">${safe(productName(p))} - ${money(productPrice(p))}</option>`).join('');
+ if(products.some(p=>String(p.id)===old))select.value=old;
+ updateSelectedProduct();
+}
+
+// ===== FORM RESEP POP ICE =====
+
+function renderRecipeOptions() {
+  const productSelect = document.getElementById('recipeProduct');
+  const materialSelect = document.getElementById('recipeMaterial');
+
+  if (!productSelect || !materialSelect) return;
+  productSelect.onchange = renderRecipeHpp;
+
+  const oldProduct = productSelect.value;
+  const oldMaterial = materialSelect.value;
+
+  productSelect.innerHTML =
+    '<option value="">-- Pilih produk --</option>' +
+    products.map(p =>
+      `<option value="${safe(p.id)}">${safe(productName(p))}</option>`
+    ).join('');
+
+  materialSelect.innerHTML =
+    '<option value="">-- Pilih bahan --</option>' +
+    materials.map(m =>
+      `<option value="${safe(m.id)}">${safe(m.name)} (${safe(m.unit)})</option>`
+    ).join('');
+
+  if (products.some(p => String(p.id) === oldProduct)) {
+    productSelect.value = oldProduct;
+  }
+
+  if (materials.some(m => String(m.id) === oldMaterial)) {
+    materialSelect.value = oldMaterial;
+  }
+
+  renderRecipeHpp();
+}
+
+
+function updateSelectedProduct(){
+ const p=products.find(x=>String(x.id)===document.getElementById('saleProduct').value);
+ document.getElementById('selectedProductInfo').textContent=
+  p?'Harga: '+money(productPrice(p)):'Pilih produk untuk melihat harga.';
+}
+document.getElementById('saleProduct').addEventListener('change',updateSelectedProduct);
+
+function addToCart(){
+ const pid=document.getElementById('saleProduct').value;
+ const qty=Number(document.getElementById('saleQuantity').value);
+ const p=products.find(x=>String(x.id)===pid);
+ if(!p)return alert('Pilih produk terlebih dahulu.');
+ if(!Number.isInteger(qty)||qty<1)return alert('Jumlah harus minimal 1.');
+ if(productPrice(p)<=0)return alert('Harga produk belum benar. Periksa data produk.');
+
+ const existing=cart.find(x=>String(x.productId)===pid);
+ if(existing)existing.qty+=qty;
+ else cart.push({productId:pid,qty});
+ document.getElementById('saleQuantity').value=1;
+ renderCart();
+}
+
+function cartTotal(){
+ return cart.reduce((sum,item)=>{
+  const p=products.find(x=>String(x.id)===String(item.productId));
+  return sum+(p?productPrice(p)*item.qty:0);
+ },0);
+}
+
+function changeQty(pid,delta){
+ const item=cart.find(x=>String(x.productId)===String(pid));
+ if(!item)return;
+ item.qty+=delta;
+ if(item.qty<=0)cart=cart.filter(x=>x!==item);
+ renderCart();
+}
+
+function removeCartItem(pid){
+ cart=cart.filter(x=>String(x.productId)!==String(pid));
+ renderCart();
+}
+
+function clearCart(){
+ if(!cart.length)return;
+ if(!confirm('Kosongkan keranjang?'))return;
+ cart=[];
+ document.getElementById('cashReceived').value='';
+ renderCart();
+}
+
+function renderCart(){
+ const el=document.getElementById('cartList');
+ if(!cart.length){
+  el.innerHTML='<div class="empty">Keranjang masih kosong.</div>';
+ }else{
+  el.innerHTML=cart.map(item=>{
+   const p=products.find(x=>String(x.id)===String(item.productId));
+   if(!p)return '';
+   return `<div class="cartrow">
+    <div style="flex:1">
+     <strong>${safe(productName(p))}</strong>
+     <div class="muted">${money(productPrice(p))} × ${item.qty} = ${money(productPrice(p)*item.qty)}</div>
+    </div>
+    <div class="qtycontrols">
+     <button class="secondary" onclick="changeQty('${safe(item.productId)}',-1)">−</button>
+     <b>${item.qty}</b>
+     <button class="secondary" onclick="changeQty('${safe(item.productId)}',1)">+</button>
+    </div>
+    <button class="small danger" onclick="removeCartItem('${safe(item.productId)}')">×</button>
+   </div>`;
+  }).join('');
+ }
+ document.getElementById('cartTotal').textContent=money(cartTotal());
+ document.getElementById('paymentTotal').textContent=money(cartTotal());
+ updatePayment();
+}
+
+
+function updatePayment(){
+ const total = cartTotal();
+ const method = document.getElementById('paymentMethod').value;
+ const input = document.getElementById('cashReceived');
+ const label = document.getElementById('paymentAmountLabel');
+ const changeEl = document.getElementById('changeAmount');
+ const msg = document.getElementById('paymentMessage');
+
+ if(method === 'Tunai'){
+  input.readOnly = false;
+  label.textContent = 'Uang diterima dari pelanggan (Rp)';
+ } else {
+  input.value = total;
+  input.readOnly = true;
+  label.textContent = 'Nominal pembayaran (otomatis)';
+ }
+
+ const cash = Number(input.value || 0);
+ const change = method === 'Tunai' ? cash - total : 0;
+
+ changeEl.textContent = money(Math.max(0, change));
+
+ if(!cart.length){
+  msg.textContent = 'Tambahkan produk ke keranjang terlebih dahulu.';
+ } else if(method === 'Tunai' && cash < total){
+  msg.textContent = 'Uang pembayaran belum mencukupi.';
+ } else if(method !== 'Tunai'){
+  msg.textContent = 'Pastikan pembayaran ' + method + ' sudah diterima sebelum menyelesaikan transaksi.';
+ } else {
+  msg.textContent = 'Pembayaran mencukupi.';
+ }
+}
+
+
+function calculateRequiredStock(){
+ const required={};
+ for(const item of cart){
+  const product=products.find(p=>String(p.id)===String(item.productId));
+  if(!product)return {ok:false,message:'Ada produk yang tidak ditemukan.'};
+  const productRecipes=recipes.filter(r=>String(r.productId)===String(item.productId));
+  if(!productRecipes.length){
+   return {ok:false,message:'Resep '+productName(product)+' belum dibuat. Lengkapi resep sebelum menjual.'};
+  }
+  for(const r of productRecipes){
+   const m=materials.find(x=>String(x.id)===String(r.materialId));
+   if(!m)return {ok:false,message:'Bahan dalam resep tidak ditemukan.'};
+   const amount=Number(r.qty)*item.qty;
+   if(!Number.isFinite(amount)||amount<=0)
+    return {ok:false,message:'Takaran resep tidak valid untuk '+m.name+'.'};
+   required[m.id]=(required[m.id]||0)+amount;
+  }
+ }
+ for(const materialId of Object.keys(required)){
+  const m=materials.find(x=>String(x.id)===String(materialId));
+  if(Number(m.stock)<required[materialId]){
+   return {ok:false,message:'Stok '+m.name+' tidak cukup. Tersedia '+m.stock+' '+m.unit+', dibutuhkan '+required[materialId]+' '+m.unit+'.'};
+  }
+ }
+ return {ok:true,required};
+}
+
+
+async function checkout(){
+ if(!cart.length)return alert('Keranjang masih kosong.');
+
+ if(!currentUser || !currentRole){
+  return alert('Silakan login terlebih dahulu.');
+ }
+
+ const total=cartTotal();
+ const method=document.getElementById('paymentMethod').value;
+
+ let cash;
+
+ if(method==='Tunai'){
+  cash=Number(document.getElementById('cashReceived').value);
+
+  if(!Number.isFinite(cash)||cash<total)
+   return alert('Uang pelanggan belum mencukupi.');
+
+  if(!Number.isInteger(cash))
+   return alert('Nominal uang harus berupa angka bulat.');
+ } else {
+  cash=total;
+ }
+
+ const change=method==='Tunai'?cash-total:0;
+
+ const stockCheck=calculateRequiredStock();
+ if(!stockCheck.ok)return alert(stockCheck.message);
+
+ const confirmation=confirm(
+  'Konfirmasi transaksi?\n\n' +
+  'Total: '+money(total)+'\n' +
+  'Metode: '+method+'\n' +
+  'Stok akan dikurangi dari database cloud.'
+ );
+
+ if(!confirmation)return;
+
+ const items=cart.map(item=>{
+  const p=products.find(x=>String(x.id)===String(item.productId));
+
+  return {
+   productId:item.productId,
+   name:productName(p),
+   price:productPrice(p),
+   qty:item.qty,
+   subtotal:productPrice(p)*item.qty
+  };
+ });
+
+ const transaction={
+  id:id(),
+  date:new Date().toISOString(),
+  items,
+  total,
+  paymentMethod:method,
+  cash,
+  change
+ };
+
+ try {
+  const {data,error}=await supabaseClient.rpc(
+   'checkout_sale',
+   {
+    p_sale:transaction,
+    p_required:stockCheck.required
+   }
+  );
+
+  if(error)throw error;
+
+  if(!data || !['success','already_processed'].includes(data.status)){
+   throw new Error('Status transaksi dari server tidak dikenali.');
+  }
+
+  cart=[];
+
+  document.getElementById('cashReceived').value='';
+
+  const refreshed=await loadCloudData();
+
+  renderAll();
+  updatePayment();
+
+  showReceipt(transaction);
+
+  if(!refreshed){
+   alert('Transaksi tersimpan di cloud, tetapi pembaruan tampilan data gagal. Muat ulang aplikasi.');
+  }
+
+ } catch(error) {
+  alert(
+   'Transaksi gagal disimpan!\n\n'+
+   error.message+
+   '\n\nKeranjang tetap dipertahankan. Periksa status transaksi sebelum mencoba kembali.'
+  );
+ }
+}
+
+
+
+function showReceipt(t) {
+  const area = document.getElementById('receiptArea');
+
+  if (!area) {
+    alert('Area struk tidak ditemukan.');
+    return;
+  }
+
+  const items = (t.items || []).map(i => `
+    <div style="margin-bottom:5px">
+      <div>${safe(i.name)}</div>
+      <div class="receipt-row">
+        <span>${i.qty} x ${money(i.price)}</span>
+        <span>${money(i.subtotal)}</span>
+      </div>
+    </div>
+  `).join('');
+
+  const method = t.paymentMethod || 'Tidak tercatat';
+
+  area.innerHTML = `
+    <div class="receipt-paper">
+      <h3>POP ICE BUSINESS</h3>
+      <div class="receipt-center">STRUK PEMBAYARAN</div>
+      <div class="receipt-line"></div>
+      <div>No: ${safe(t.id)}</div>
+      <div>${new Date(t.date).toLocaleString('id-ID')}</div>
+      <div class="receipt-line"></div>
+      ${items}
+      <div class="receipt-line"></div>
+      <div class="receipt-row receipt-total">
+        <span>TOTAL</span>
+        <span>${money(t.total)}</span>
+      </div>
+      <div class="receipt-line"></div>
+      <div>Metode: ${safe(method)}</div>
+      <div>Uang diterima: ${money(t.cash)}</div>
+      <div>Kembalian: ${money(t.change)}</div>
+      <div class="receipt-line"></div>
+      <div class="receipt-center">
+        Terima kasih sudah membeli!
+        <br>Selamat menikmati 😊
+      </div>
+    </div>
+
+    <div class="receipt-actions">
+      <button onclick="window.print()">🖨️ Cetak Struk</button>
+      <button onclick="closeReceipt()">Tutup</button>
+    </div>
+  `;
+
+  area.classList.remove('hidden');
+  showPage('history');
+}
+
+function closeReceipt() {
+  const area = document.getElementById('receiptArea');
+
+  if (!area) return;
+
+  area.classList.add('hidden');
+  area.innerHTML = '';
+}
+
+function renderHistory(){
+ const el=document.getElementById('salesHistory');
+
+ if(!sales.length){
+  el.innerHTML='<div class="empty">Belum ada transaksi penjualan.</div>';
+  return;
+ }
+
+ el.innerHTML=sales.map(t=>{
+  const method=t.paymentMethod || 'Tidak tercatat';
+
+  return `
+   <div class="item">
+    <div class="rowline">
+     <strong>${safe(t.id)}</strong>
+     <span class="badge">Lunas</span>
+    </div>
+
+    <div class="muted">
+     ${new Date(t.date).toLocaleString('id-ID')}
+    </div>
+
+    ${(t.items||[]).map(i=>`
+     <div class="rowline" style="padding:5px 0">
+      <span class="muted">${safe(i.name)} × ${i.qty}</span>
+      <span>${money(i.subtotal)}</span>
+     </div>
+    `).join('')}
+
+    <div class="rowline" style="margin-top:8px">
+     <strong>Total</strong>
+     <strong>${money(t.total)}</strong>
+    </div>
+
+    <div class="muted">
+     Metode Pembayaran: <b>${safe(method)}</b>
+    </div>
+
+    <div class="muted">
+     Uang diterima: ${money(t.cash)}
+     · Kembalian: ${money(t.change)}
+    </div>
+
+    <button onclick="reprintReceipt('${safe(t.id)}')">
+      🧾 Lihat / Cetak Ulang Struk
+    </button>
+   </div>
+  `;
+ }).join('');
+}
+
+function reprintReceipt(transactionId){
+ const transaction=sales.find(
+  t=>String(t.id)===String(transactionId)
+ );
+
+ if(!transaction){
+  return alert('Transaksi tidak ditemukan.');
+ }
+
+ showReceipt(transaction);
+}
+
+
+// ===== FASE 5: PENGELUARAN USAHA =====
+const EXPENSE_KEY = 'popIceExpenses';
+
+function getExpenses() {
+  try {
+    return JSON.parse(localStorage.getItem(EXPENSE_KEY)) || [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function saveExpenses(data) {
+  localStorage.setItem(EXPENSE_KEY, JSON.stringify(data));
+}
+
+function formatRupiah(number) {
+  return 'Rp' + Number(number || 0).toLocaleString('id-ID');
+}
+
+function addExpense() {
+  const date = document.getElementById('expenseDate').value;
+  const category = document.getElementById('expenseCategory').value;
+  const note = document.getElementById('expenseNote').value.trim();
+  const amount = Number(document.getElementById('expenseAmount').value);
+
+  if (!date || !note || !Number.isFinite(amount) || amount <= 0) {
+    alert('Lengkapi tanggal, keterangan, dan nominal dengan benar.');
+    return;
+  }
+
+  const expenses = getExpenses();
+
+  expenses.push({
+    id: Date.now().toString(),
+    date,
+    category,
+    note,
+    amount
+  });
+
+  saveExpenses(expenses);
+
+  document.getElementById('expenseNote').value = '';
+  document.getElementById('expenseAmount').value = '';
+
+  renderExpenses();
+  alert('Pengeluaran berhasil disimpan!');
+}
+
+function deleteExpense(id) {
+  if (!confirm('Hapus catatan pengeluaran ini?')) return;
+
+  const expenses = getExpenses().filter(item => item.id !== id);
+  saveExpenses(expenses);
+  renderExpenses();
+}
+
+
+function editExpense(id) {
+  const expenses = getExpenses();
+  const item = expenses.find(x => x.id === id);
+
+  if (!item) return;
+
+  const note = prompt('Ubah keterangan:', item.note);
+  if (note === null) return;
+
+  const amount = prompt('Ubah nominal:', item.amount);
+  if (amount === null) return;
+
+  const category = prompt('Ubah kategori:', item.category);
+  if (category === null) return;
+
+  const date = prompt('Ubah tanggal (YYYY-MM-DD):', item.date);
+  if (date === null) return;
+
+  const newAmount = Number(amount);
+
+  if (!note.trim() || !Number.isFinite(newAmount) || newAmount <= 0 ||
+      !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    alert('Data tidak valid. Pengeluaran belum diubah.');
+    return;
+  }
+
+  item.note = note.trim();
+  item.amount = newAmount;
+  item.category = category.trim();
+  item.date = date;
+
+  saveExpenses(expenses);
+  renderExpenses();
+  alert('Pengeluaran berhasil diperbarui!');
+}
+
+function renderExpenses() {
+  const expenses = getExpenses();
+  const total = expenses.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+
+  document.getElementById('expenseTotal').textContent = formatRupiah(total);
+
+  const history = document.getElementById('expenseHistory');
+
+  if (!expenses.length) {
+    history.innerHTML = '<p>Belum ada pengeluaran.</p>';
+    return;
+  }
+
+  history.innerHTML = expenses.slice().reverse().map(item => `
+    <div style="border-bottom:1px solid #ddd;padding:10px 0">
+      <strong>${item.note.replace(/[&<>"']/g, c => ({
+        '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+      })[c])}</strong>
+      <div>${item.date} • ${item.category}</div>
+      <strong>${formatRupiah(item.amount)}</strong>
+      <div style="margin-top:8px">
+        <button onclick="editExpense('${item.id}')">Edit</button>
+        <button onclick="deleteExpense('${item.id}')">Hapus</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+
+document.addEventListener('DOMContentLoaded', renderExpenses);
+
+// ===== MESIN LAPORAN PENGELUARAN =====
+
+function renderExpenseReport() {
+  const input = document.getElementById('reportMonth');
+  if (!input) return;
+
+  if (!input.value) {
+    const now = new Date();
+    input.value = now.getFullYear() + '-' +
+      String(now.getMonth() + 1).padStart(2, '0');
+  }
+
+  const selectedMonth = input.value;
+  const [year, month] = selectedMonth.split('-').map(Number);
+
+  const expenses = getExpenses();
+
+  const monthly = expenses.filter(item =>
+    item.date && item.date.startsWith(selectedMonth)
+  );
+
+  const previousDate = new Date(year, month - 2, 1);
+  const previousMonth =
+    previousDate.getFullYear() + '-' +
+    String(previousDate.getMonth() + 1).padStart(2, '0');
+
+  const previous = expenses.filter(item =>
+    item.date && item.date.startsWith(previousMonth)
+  );
+
+  const total = monthly.reduce(
+    (sum, item) => sum + Number(item.amount || 0), 0
+  );
+
+  const previousTotal = previous.reduce(
+    (sum, item) => sum + Number(item.amount || 0), 0
+  );
+
+  document.getElementById('reportTotal').textContent =
+    formatRupiah(total);
+
+  document.getElementById('reportPrevious').textContent =
+    formatRupiah(previousTotal);
+
+  // Ringkasan kategori
+  const categories = {};
+
+  monthly.forEach(item => {
+    categories[item.category] =
+      (categories[item.category] || 0) + Number(item.amount || 0);
+  });
+
+  const categoryBox = document.getElementById('reportCategory');
+
+  const categoryEntries = Object.entries(categories)
+    .sort((a, b) => b[1] - a[1]);
+
+  if (!categoryEntries.length) {
+    categoryBox.innerHTML = '<p>Belum ada pengeluaran bulan ini.</p>';
+  } else {
+    categoryBox.innerHTML = categoryEntries.map(([name, amount]) => {
+      const percent = total > 0 ? amount / total * 100 : 0;
+
+      return `
+        <div style="margin:12px 0">
+          <div style="display:flex;justify-content:space-between;gap:8px">
+            <strong>${name}</strong>
+            <strong>${formatRupiah(amount)}</strong>
+          </div>
+          <div style="background:#e5e7eb;height:10px;border-radius:10px;margin-top:6px">
+            <div style="background:#16834a;width:${percent}%;height:10px;border-radius:10px"></div>
+          </div>
+          <small>${percent.toFixed(1)}%</small>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // Rincian transaksi
+  const historyBox = document.getElementById('reportHistory');
+
+  if (!monthly.length) {
+    historyBox.innerHTML = '<p>Tidak ada transaksi pada bulan ini.</p>';
+  } else {
+    historyBox.innerHTML = monthly.slice().reverse().map(item => `
+      <div style="padding:10px 0;border-bottom:1px solid #ddd">
+        <strong>${item.note.replace(/[&<>"']/g, c => ({
+          '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+        })[c])}</strong>
+        <div>${item.date} • ${item.category}</div>
+        <strong>${formatRupiah(item.amount)}</strong>
+      </div>
+    `).join('');
+  }
+}
+function renderSalesReport() {
+  const input = document.getElementById('salesReportMonth');
+  if (!input) return;
+
+  if (!input.value) {
+    const now = new Date();
+    input.value = now.getFullYear() + '-' +
+      String(now.getMonth() + 1).padStart(2, '0');
+  }
+
+  const selectedMonth = input.value;
+  const allSales = readData(SALES_KEY);
+
+  const monthlySales = allSales.filter(t =>
+    t.date && t.date.startsWith(selectedMonth)
+  );
+
+  const total = monthlySales.reduce(
+    (sum, t) => sum + Number(t.total || 0), 0
+  );
+
+  const totalQty = monthlySales.reduce((sum, t) =>
+    sum + (t.items || []).reduce(
+      (itemSum, item) => itemSum + Number(item.qty || 0), 0
+    ), 0
+  );
+
+  document.getElementById('salesReportTotal').textContent =
+    formatRupiah(total);
+
+  document.getElementById('salesReportCount').textContent =
+    monthlySales.length;
+
+  document.getElementById('salesReportQty').textContent =
+    totalQty;
+
+  const payments = {};
+
+  monthlySales.forEach(t => {
+    const method = t.paymentMethod || 'Tidak tercatat';
+    payments[method] =
+      (payments[method] || 0) + Number(t.total || 0);
+  });
+
+  const paymentBox =
+    document.getElementById('salesReportPayment');
+
+  const entries = Object.entries(payments)
+    .sort((a, b) => b[1] - a[1]);
+
+  if (!entries.length) {
+    paymentBox.innerHTML =
+      '<p>Belum ada penjualan bulan ini.</p>';
+  } else {
+    paymentBox.innerHTML = entries.map(([name, amount]) => `
+      <div class="rowline" style="padding:10px 0;border-bottom:1px solid #ddd">
+        <strong>${safe(name)}</strong>
+        <strong>${formatRupiah(amount)}</strong>
+      </div>
+    `).join('');
+    }
+
+  // Rincian penjualan berdasarkan produk
+  const productSummary = {};
+
+  monthlySales.forEach(t => {
+    (t.items || []).forEach(item => {
+      const name = item.name || 'Produk';
+
+      if (!productSummary[name]) {
+        productSummary[name] = {
+          qty: 0,
+          omzet: 0
+        }
+      }
+
+      productSummary[name].qty += Number(item.qty || 0);
+      productSummary[name].omzet += Number(item.subtotal || 0);
+    });
+  });
+
+  const productBox =
+    document.getElementById('salesReportProducts');
+
+  const productEntries = Object.entries(productSummary)
+    .sort((a, b) => b[1].qty - a[1].qty);
+
+  if (!productEntries.length) {
+    productBox.innerHTML =
+      '<p>Belum ada penjualan bulan ini.</p>';
+  } else {
+    productBox.innerHTML = productEntries.map(([name, data], index) => `
+      <div style="padding:12px 0;border-bottom:1px solid #ddd">
+        <div class="rowline">
+          <strong>${index + 1}. ${safe(name)}</strong>
+          <strong>${data.qty} terjual</strong>
+        </div>
+        <div style="text-align:right;color:#16834a;font-weight:bold">
+          ${formatRupiah(data.omzet)}
+        </div>
+      </div>
+    `).join('');
+  }
+renderProfitReport();  
+}
+function renderProfitReport() {
+  const input = document.getElementById('salesReportMonth');
+  if (!input) return;
+
+  const selectedMonth = input.value;
+  const allSales = readData(SALES_KEY);
+  const allExpenses = getExpenses();
+
+  const monthlySales = allSales.filter(t =>
+    t.date && t.date.startsWith(selectedMonth)
+  );
+
+  const monthlyExpenses = allExpenses.filter(e =>
+    e.date && e.date.startsWith(selectedMonth)
+  );
+
+  let omzet = 0;
+  let totalHpp = 0;
+  let incomplete = false;
+
+  monthlySales.forEach(t => {
+    omzet += Number(t.total || 0);
+
+    (t.items || []).forEach(item => {
+      const product = products.find(p =>
+        String(p.id) === String(item.productId)
+      );
+
+      if (!product) {
+        incomplete = true;
+        return;
+      }
+
+      const productRecipes = recipes.filter(r =>
+        String(r.productId) === String(product.id)
+      );
+
+      if (!productRecipes.length) {
+        incomplete = true;
+        return;
+      }
+
+      productRecipes.forEach(r => {
+        const m = materials.find(x =>
+          String(x.id) === String(r.materialId)
+        );
+
+        if (!m) {
+          incomplete = true;
+          return;
+        }
+
+        const price = Number(m.price ?? m.purchasePrice ?? m.hargaBeli ?? 0);
+        const packageQty = Number(
+          m.packageQty ?? m.quantity ?? m.isiKemasan ?? 0
+        );
+
+        if (price <= 0 || packageQty <= 0) {
+          incomplete = true;
+          return;
+        }
+
+        totalHpp +=
+          (price / packageQty) *
+          Number(r.qty) *
+          Number(item.qty);
+      });
+    });
+  });
+
+  const expenseTotal = monthlyExpenses.reduce(
+    (sum, e) => sum + Number(e.amount || 0), 0
+  );
+
+  const gross = omzet - totalHpp;
+  const net = gross - expenseTotal;
+
+  document.getElementById('profitOmzet').textContent =
+    formatRupiah(omzet);
+
+  document.getElementById('profitHpp').textContent =
+    formatRupiah(totalHpp);
+
+  document.getElementById('profitGross').textContent =
+    formatRupiah(gross);
+
+  document.getElementById('profitExpense').textContent =
+    formatRupiah(expenseTotal);
+
+  document.getElementById('profitNet').textContent =
+    formatRupiah(net);
+
+  document.getElementById('profitWarning').textContent =
+    incomplete
+      ? 'Perhatian: Ada resep atau harga bahan yang belum lengkap. Hasil laba belum akurat.'
+      : 'Perhitungan menggunakan harga bahan dan resep yang tersimpan saat ini.';
+}
+// Perbarui laporan saat bulan diganti
+document.getElementById('reportMonth').addEventListener(
+  'change', renderExpenseReport
+);
+
+document.addEventListener('DOMContentLoaded', function() {
+  const now = new Date();
+  document.getElementById('reportMonth').value =
+    now.getFullYear() + '-' +
+    String(now.getMonth() + 1).padStart(2, '0');
+
+  renderExpenseReport();
+});
+
+function renderAll(){
+ products=readData(PRODUCT_KEY);
+ materials=readData(MATERIAL_KEY);
+ recipes=readData(RECIPE_KEY);
+ sales=readData(SALES_KEY);
+ renderDashboard();
+ renderProducts();
+ renderMaterials();
+ renderRecipes();
+ renderProductOptions();
+ renderRecipeOptions();
+ renderCart();
+ renderHistory();
+}
+
+// ===== TAMBAH BAHAN KE RESEP =====
+
+function addRecipe() {
+  const productId = document.getElementById('recipeProduct').value;
+  const materialId = document.getElementById('recipeMaterial').value;
+  const qty = Number(document.getElementById('recipeQty').value);
+
+  if (!productId) return alert('Pilih produk terlebih dahulu.');
+  if (!materialId) return alert('Pilih bahan baku terlebih dahulu.');
+  if (!Number.isFinite(qty) || qty <= 0) {
+    return alert('Jumlah pemakaian harus lebih dari 0.');
+  }
+
+  const product = products.find(p => String(p.id) === String(productId));
+  const material = materials.find(m => String(m.id) === String(materialId));
+
+  if (!product || !material) {
+    return alert('Produk atau bahan tidak ditemukan.');
+  }
+
+  const existing = recipes.find(r =>
+    String(r.productId) === String(productId) &&
+    String(r.materialId) === String(materialId)
+  );
+
+  if (existing) {
+    existing.qty = qty;
+  } else {
+    recipes.push({
+      id: id(),
+      productId: productId,
+      materialId: materialId,
+      qty: qty
+    });
+  }
+
+  saveData(RECIPE_KEY, recipes);
+
+  document.getElementById('recipeQty').value = '';
+
+  renderAll();
+
+  alert('Bahan berhasil dimasukkan ke resep!');
+}
+
+
+// ===== HITUNG HPP RESEP =====
+
+function renderRecipeHpp() {
+  const el = document.getElementById('recipeHpp');
+  const select = document.getElementById('recipeProduct');
+
+  if (!el || !select) return;
+
+  const productId = select.value;
+
+  if (!productId) {
+    el.innerHTML = 'Pilih produk untuk melihat HPP.';
+    return;
+  }
+
+  const product = products.find(p =>
+    String(p.id) === String(productId)
+  );
+
+  const productRecipes = recipes.filter(r =>
+    String(r.productId) === String(productId)
+  );
+
+  if (!productRecipes.length) {
+    el.innerHTML = 'Resep produk ini belum dibuat.';
+    return;
+  }
+
+  let totalHpp = 0;
+  let incomplete = false;
+
+  let html = '<div class="item">';
+
+  productRecipes.forEach(r => {
+    const m = materials.find(x =>
+      String(x.id) === String(r.materialId)
+    );
+
+    if (!m) {
+      incomplete = true;
+      return;
+    }
+
+    const price = Number(m.price ?? m.purchasePrice ?? m.hargaBeli ?? 0);
+    const packageQty = Number(
+      m.packageQty ?? m.quantity ?? m.isiKemasan ?? 0
+    );
+
+    if (price <= 0 || packageQty <= 0) {
+      incomplete = true;
+      html += `<div>${safe(m.name)}: Harga bahan belum diatur</div>`;
+      return;
+    }
+
+    const cost = (price / packageQty) * Number(r.qty);
+    totalHpp += cost;
+
+    html += `
+      <div class="rowline">
+        <span>${safe(m.name)} (${r.qty} ${safe(m.unit)})</span>
+        <b>${money(cost)}</b>
+      </div>
+    `;
+  });
+
+  html += '</div>';
+
+  if (incomplete) {
+    html += '<p class="muted">Lengkapi harga dan isi kemasan bahan untuk mendapatkan HPP lengkap.</p>';
+  }
+
+  html += `
+    <hr>
+    <div class="rowline">
+      <strong>Total HPP per gelas</strong>
+      <strong>${money(totalHpp)}</strong>
+    </div>
+    <div class="rowline">
+      <span>Harga jual</span>
+      <b>${money(productPrice(product))}</b>
+    </div>
+    <div class="rowline">
+      <span>Keuntungan kotor</span>
+      <b>${money(productPrice(product) - totalHpp)}</b>
+    </div>
+  `;
+
+  el.innerHTML = html;
+}
+
+
+// ===== HAPUS BAHAN RESEP =====
+
+function deleteRecipe(recipeId) {
+  if (!confirm('Hapus bahan ini dari resep?')) return;
+
+  recipes = recipes.filter(r => String(r.id) !== String(recipeId));
+
+  saveData(RECIPE_KEY, recipes);
+  renderAll();
+}
+
+
+renderAll();
+
+// ===== FASE 6: BACKUP & RESTORE =====
+
+
+// ===== BACKUP POP ICE BUSINESS =====
+
+
+function backupBusinessData() {
+  try {
+    const backup = {
+      app: 'PopIceBusiness',
+      version: 1,
+      createdAt: new Date().toISOString(),
+      products: readData('popIceProducts'),
+      materials: readData('popIceMaterials'),
+      recipes: readData('popIceRecipes'),
+      sales: readData('popIceSales'),
+      expenses: getExpenses()
+    };
+
+    const content = JSON.stringify(backup, null, 2);
+
+    const oldBox = document.getElementById('backupOutput');
+    if (oldBox) oldBox.remove();
+
+    const box = document.createElement('div');
+    box.id = 'backupOutput';
+    box.style.cssText =
+      'position:relative;background:white;color:#222;padding:15px;' +
+      'margin:12px;border:2px solid #16834a;border-radius:10px;';
+
+    box.innerHTML = `
+      <h3>Backup Berhasil Dibuat</h3>
+      <p>Salin seluruh teks di bawah ini untuk menyimpan backup.</p>
+      <textarea id="backupText"
+        readonly
+        style="width:100%;height:250px;box-sizing:border-box;padding:10px;"
+      ></textarea>
+      <button onclick="copyBackupText()">Salin Backup</button>
+      <p id="backupCopyStatus"></p>
+    `;
+
+    document.getElementById('backup').appendChild(box);
+
+    document.getElementById('backupText').value = content;
+
+  } catch (error) {
+    alert('Backup gagal: ' + error.message);
+  }
+}
+
+function copyBackupText() {
+  const textBox = document.getElementById('backupText');
+
+  textBox.focus();
+  textBox.select();
+  textBox.setSelectionRange(0, textBox.value.length);
+
+  try {
+    const success = document.execCommand('copy');
+    document.getElementById('backupCopyStatus').textContent =
+      success
+        ? 'Teks backup berhasil disalin!'
+        : 'Pilih semua teks lalu salin secara manual.';
+  } catch (error) {
+    document.getElementById('backupCopyStatus').textContent =
+      'Pilih semua teks lalu salin secara manual.';
+  }
+}
+
+
+
+
+function restoreBusinessData() {
+  const fileInput = document.getElementById('backupFile');
+  const file = fileInput.files[0];
+
+  if (!file) {
+    alert('Pilih file Backup-PopIceBusiness.json terlebih dahulu.');
+    return;
+  }
+
+  const reader = new FileReader();
+
+  reader.onload = function(event) {
+    try {
+      const backup = JSON.parse(event.target.result);
+
+      const valid =
+        backup.app === 'PopIceBusiness' &&
+        backup.version === 1 &&
+        Array.isArray(backup.products) &&
+        Array.isArray(backup.materials) &&
+        Array.isArray(backup.recipes) &&
+        Array.isArray(backup.sales) &&
+        Array.isArray(backup.expenses);
+
+      if (!valid) {
+        alert('File backup tidak valid atau tidak cocok.');
+        return;
+      }
+
+      const approved = confirm(
+        'Data backup ditemukan.\n\n' +
+        'Produk: ' + backup.products.length + '\n' +
+        'Bahan: ' + backup.materials.length + '\n' +
+        'Resep: ' + backup.recipes.length + '\n' +
+        'Transaksi: ' + backup.sales.length + '\n' +
+        'Pengeluaran: ' + backup.expenses.length +
+        '\n\nPulihkan data sekarang? Data saat ini akan diganti.'
+      );
+
+      if (!approved) return;
+
+      saveData('popIceProducts', backup.products);
+      saveData('popIceMaterials', backup.materials);
+      saveData('popIceRecipes', backup.recipes);
+      saveData('popIceSales', backup.sales);
+      saveExpenses(backup.expenses);
+
+      alert('Restore berhasil! Aplikasi akan dimuat ulang.');
+
+      location.reload();
+
+    } catch (error) {
+      alert('Restore gagal: ' + error.message);
+    }
+  };
+
+  reader.onerror = function() {
+    alert('File backup gagal dibaca.');
+  };
+
+  reader.readAsText(file);
+}
+// ===============================
+// LOGIN DAN AUTENTIKASI SUPABASE
+// ===============================
+
+let currentUser = null;
+let currentRole = null;
+
+function showLogin(message = '') {
+  const page = document.getElementById('loginPage');
+
+  page.classList.remove('hidden');
+
+  page.style.cssText = `
+    position:fixed;
+    inset:0;
+    z-index:99999;
+    background:#f3f4f6;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+    overflow:auto;
+  `;
+
+  document.getElementById('loginMessage').textContent = message;
+}
+
+function hideLogin() {
+  document.getElementById('loginPage').classList.add('hidden');
+}
+
+async function loginUser() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const message = document.getElementById('loginMessage');
+
+  if (!email || !password) {
+    message.textContent = 'Masukkan email dan password.';
+    return;
+  }
+
+  message.textContent = 'Sedang masuk...';
+
+  const { data, error } = await supabaseClient.auth.signInWithPassword({
+    email,
+    password
+  });
+
+  if (error) {
+    message.textContent = 'Login gagal: ' + error.message;
+    return;
+  }
+
+  await checkLogin();
+}
+// =================================
+// AMBIL DATA DARI SUPABASE
+// =================================
+
+async function loadCloudData() {
+  try {
+    const [p, m, r, s] = await Promise.all([
+      supabaseClient.from('products').select('*'),
+      supabaseClient.from('materials').select('*'),
+      supabaseClient.from('recipes').select('*'),
+      supabaseClient.from('sales').select('*')
+    ]);
+
+    if (p.error) throw p.error;
+    if (m.error) throw m.error;
+    if (r.error) throw r.error;
+    if (s.error) throw s.error;
+
+    let cloudExpenses = null;
+
+    if (currentRole === 'owner') {
+      const e = await supabaseClient
+        .from('expenses')
+        .select('*');
+
+      if (e.error) throw e.error;
+      cloudExpenses = e.data;
+    }
+
+    // Ubah format data cloud ke format aplikasi
+    const newProducts = (p.data || []).map(x => ({
+      id: x.id,
+      name: x.name,
+      price: Number(x.price)
+    }));
+
+    const newMaterials = (m.data || []).map(x => ({
+      id: x.id,
+      name: x.name,
+      price: Number(x.price),
+      packageQty: Number(x.package_qty),
+      stock: Number(x.stock),
+      minimum: Number(x.minimum),
+      unit: x.unit
+    }));
+
+    const newRecipes = (r.data || []).map(x => ({
+      id: x.id,
+      productId: x.product_id,
+      materialId: x.material_id,
+      qty: Number(x.qty)
+    }));
+
+    const newSales = (s.data || []).map(x => ({
+      id: x.id,
+      date: x.date,
+      items: x.items || [],
+      total: Number(x.total),
+      paymentMethod: x.payment_method,
+      cash: Number(x.cash || 0),
+      change: Number(x.change_amount || 0)
+    }));
+
+    // Simpan hanya setelah semua data berhasil dibaca
+    saveData(PRODUCT_KEY, newProducts);
+    saveData(MATERIAL_KEY, newMaterials);
+    saveData(RECIPE_KEY, newRecipes);
+    saveData(SALES_KEY, newSales);
+
+    if (cloudExpenses !== null) {
+      saveExpenses(cloudExpenses.map(x => ({
+        id: x.id,
+        date: x.date,
+        category: x.category,
+        note: x.note,
+        amount: Number(x.amount)
+      })));
+    }
+
+    return true;
+
+  } catch (error) {
+    alert('Gagal mengambil data cloud: ' + error.message);
+    return false;
+  }
+}
+// =================================
+// SUPABASE REALTIME
+// =================================
+
+let cloudRealtime = null;
+let realtimeRefreshTimer = null;
+
+function startCloudRealtime() {
+
+  if (cloudRealtime) {
+    supabaseClient.removeChannel(cloudRealtime);
+    cloudRealtime = null;
+  }
+
+  cloudRealtime = supabaseClient
+    .channel('pop-ice-live-sync')
+
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'materials'
+      },
+      () => {
+        scheduleCloudRefresh();
+      }
+    )
+
+    .on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'sales'
+      },
+      () => {
+        scheduleCloudRefresh();
+      }
+    )
+
+    .subscribe();
+}
+
+function scheduleCloudRefresh() {
+
+  clearTimeout(realtimeRefreshTimer);
+
+  realtimeRefreshTimer = setTimeout(async () => {
+
+    if (!currentUser) return;
+
+    const loaded = await loadCloudData();
+
+    if (loaded) {
+      renderAll();
+    }
+
+  }, 500);
+  }
+
+async function checkLogin() {
+  const { data, error } = await supabaseClient.auth.getSession();
+
+  if (error || !data.session) {
+    currentUser = null;
+    currentRole = null;
+    showLogin();
+    return;
+  }
+
+  currentUser = data.session.user;
+
+  const { data: profile, error: profileError } =
+    await supabaseClient
+      .from('profiles')
+      .select('full_name, role')
+      .eq('id', currentUser.id)
+      .single();
+
+  if (profileError || !profile) {
+    await supabaseClient.auth.signOut();
+    currentUser = null;
+    currentRole = null;
+    showLogin('Profil pengguna belum terdaftar.');
+    return;
+  }
+
+  currentRole = profile.role;
+
+applyRoleAccess();
+
+// Ambil data terbaru dari Supabase
+const cloudLoaded = await loadCloudData();
+
+if (!cloudLoaded) {
+  showLogin(
+    'Gagal memuat data cloud. Periksa koneksi internet lalu coba login kembali.'
+  );
+  return;
+}
+  
+// Aktifkan sinkronisasi otomatis
+startCloudRealtime();
+  
+hideLogin();
+renderAll();
+showPage('dashboard');
+}
+
+// Periksa sesi saat aplikasi dibuka
+checkLogin();
+
+// Pantau perubahan status login
+supabaseClient.auth.onAuthStateChange((event, session) => {
+  if (event === 'SIGNED_OUT' || !session) {
+    currentUser = null;
+    currentRole = null;
+    showLogin();
+  }
+});
+async function logoutUser() {
+  const confirmLogout = confirm('Yakin ingin keluar dari aplikasi?');
+
+  if (!confirmLogout) return;
+if (cloudRealtime) {
+  await supabaseClient.removeChannel(cloudRealtime);
+  cloudRealtime = null;
+}
+  const { error } = await supabaseClient.auth.signOut();
+
+  if (error) {
+    alert('Gagal keluar: ' + error.message);
+    return;
+  }
+
+  currentUser = null;
+  currentRole = null;
+  showLogin();
+}
+// =================================
+// MIGRASI DATA LOKAL KE SUPABASE
+// =================================
+
+async function migrateLocalDataToSupabase() {
+
+  if (!currentUser || currentRole !== 'owner') {
+    alert('Hanya pemilik yang boleh melakukan migrasi.');
+    return;
+  }
+
+  const localProducts = readData(PRODUCT_KEY);
+  const localMaterials = readData(MATERIAL_KEY);
+  const localRecipes = readData(RECIPE_KEY);
+  const localSales = readData(SALES_KEY);
+  const localExpenses = getExpenses();
+
+  const confirmation = confirm(
+    'Kirim data ke Supabase?\n\n' +
+    'Produk: ' + localProducts.length + '\n' +
+    'Bahan baku: ' + localMaterials.length + '\n' +
+    'Resep: ' + localRecipes.length + '\n' +
+    'Transaksi: ' + localSales.length + '\n' +
+    'Pengeluaran: ' + localExpenses.length + '\n\n' +
+    'Data lokal tidak akan dihapus.'
+  );
+
+  if (!confirmation) return;
+
+  try {
+
+    const upload = async (table, rows) => {
+      if (!rows.length) return;
+
+      const { error } = await supabaseClient
+        .from(table)
+        .upsert(rows, { onConflict: 'id' });
+
+      if (error) {
+        throw new Error(table + ': ' + error.message);
+      }
+    };
+
+    // 1. Produk
+    await upload('products', localProducts.map(p => ({
+      id: String(p.id),
+      name: productName(p),
+      price: productPrice(p)
+    })));
+
+    // 2. Bahan baku
+    await upload('materials', localMaterials.map(m => ({
+      id: String(m.id),
+      name: m.name,
+      price: Number(m.price ?? 0),
+      package_qty: Number(m.packageQty ?? 0),
+      stock: Number(m.stock ?? 0),
+      minimum: Number(m.minimum ?? 0),
+      unit: m.unit
+    })));
+
+    // 3. Resep
+    await upload('recipes', localRecipes.map(r => ({
+      id: String(r.id),
+      product_id: String(r.productId),
+      material_id: String(r.materialId),
+      qty: Number(r.qty)
+    })));
+
+    // 4. Transaksi
+    await upload('sales', localSales.map(s => ({
+      id: String(s.id),
+      date: s.date,
+      items: s.items || [],
+      total: Number(s.total || 0),
+      payment_method: s.paymentMethod || null,
+      cash: Number(s.cash || 0),
+      change_amount: Number(s.change || 0),
+      cashier_id: currentUser.id
+    })));
+
+    // 5. Pengeluaran
+    await upload('expenses', localExpenses.map(e => ({
+      id: String(e.id),
+      date: e.date,
+      category: e.category,
+      note: e.note,
+      amount: Number(e.amount || 0),
+      cashier_id: currentUser.id
+    })));
+
+    alert(
+      'MIGRASI BERHASIL!\n\n' +
+      'Semua data lokal sudah dikirim ke Supabase.'
+    );
+
+  } catch (error) {
+
+    alert(
+      'Migrasi belum selesai.\n\n' +
+      error.message +
+      '\n\nData lokal tetap aman. Jangan hapus data.'
+    );
+
+  }
+}
+</script>
+<!-- FASE 5: PENCATATAN PENGELUARAN -->
+<section id="expenseSection" class="hidden" style="padding:16px;margin:12px;background:#fff;border-radius:12px;color:#222">
+  <h2>Pengeluaran Usaha</h2>
+
+  <label>Tanggal</label>
+  <input type="date" id="expenseDate" style="display:block;width:100%;padding:10px;margin:6px 0 12px;box-sizing:border-box">
+
+  <label>Kategori</label>
+  <select id="expenseCategory" style="display:block;width:100%;padding:10px;margin:6px 0 12px;box-sizing:border-box">
+    <option value="Bahan Baku">Bahan Baku</option>
+    <option value="Kemasan">Kemasan</option>
+    <option value="Listrik">Listrik</option>
+    <option value="Air">Air</option>
+    <option value="Transportasi">Transportasi</option>
+    <option value="Peralatan">Peralatan</option>
+    <option value="Lainnya">Lainnya</option>
+  </select>
+
+  <label>Keterangan</label>
+  <input id="expenseNote" type="text" placeholder="Contoh: Beli bubuk cokelat" style="display:block;width:100%;padding:10px;margin:6px 0 12px;box-sizing:border-box">
+
+  <label>Nominal (Rp)</label>
+  <input id="expenseAmount" type="number" min="1" placeholder="Contoh: 25000" style="display:block;width:100%;padding:10px;margin:6px 0 12px;box-sizing:border-box">
+
+  <button onclick="addExpense()" style="width:100%;padding:12px;background:#16834a;color:white;border:0;border-radius:8px;font-weight:bold">
+    + Simpan Pengeluaran
+  </button>
+
+  <h3>Ringkasan Pengeluaran</h3>
+  <div id="expenseTotal" style="font-size:22px;font-weight:bold">Rp0</div>
+
+  <h3>Riwayat Pengeluaran</h3>
+  <div id="expenseHistory"></div>
+</section>
+</body>
+</html>
