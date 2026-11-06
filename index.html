@@ -280,7 +280,34 @@ style="margin-top:14px">
 
 </section>
 
+<section id="flavors" class="hidden">
 
+  <div class="card">
+    <h3>➕ Tambah Varian Rasa</h3>
+
+    <label>Nama Rasa</label>
+    <input
+      type="text"
+      id="flavorName"
+      placeholder="Contoh: Stroberi"
+    >
+
+    <label>Bahan Bubuk Rasa</label>
+    <select id="flavorMaterial">
+      <option value="">Pilih bahan bubuk</option>
+    </select>
+
+    <button onclick="addFlavor()">
+      Simpan Varian Rasa
+    </button>
+  </div>
+
+  <div class="card">
+    <h3>🍓 Daftar Varian Rasa</h3>
+    <div id="flavorList"></div>
+  </div>
+
+</section>
 
 <section id="recipes" class="hidden">
 
@@ -334,8 +361,12 @@ style="margin-top:14px">
 <div class="card">
 <h3>🛒 Pilih Produk</h3>
 <label>Produk</label>
-<select id="saleProduct"></select>
+<select id="saleProduct" onchange="updateSelectedProduct()"></select>
 <div id="selectedProductInfo" class="muted"></div>
+<label>Varian Rasa</label>
+<select id="saleFlavor">
+<option value="">Pilih rasa</option>
+</select>
 <label>Jumlah</label>
 <input id="saleQuantity" type="number" min="1" step="1" value="1">
 <button onclick="addToCart()">+ Masukkan Keranjang</button>
@@ -344,6 +375,9 @@ style="margin-top:14px">
 <div class="card">
 <h3>Keranjang Belanja</h3>
 <div id="cartList"></div>
+<button class="secondary" onclick="testStockCalculation()">
+  🔍 Periksa Kebutuhan Stok
+</button>
 <div class="rowline" style="margin-top:12px">
 <strong>Total Belanja</strong>
 <span class="total" id="cartTotal">Rp0</span>
@@ -559,6 +593,9 @@ style="margin-top:14px">
 <button id="nav-sales" onclick="showPage('sales')">🛒<br>Kasir</button>
 <button id="nav-products" onclick="showPage('products')">🧋<br>Produk</button>
 <button id="nav-materials" onclick="showPage('materials')">📦<br>Bahan</button>
+<button id="nav-flavors" onclick="showPage('flavors')">
+  🍓<br>Varian
+</button>
 <button id="nav-recipes" onclick="showPage('recipes')">📋<br>Resep</button>
 <button id="nav-history" onclick="showPage('history')">📒<br>Riwayat</button>
 <button id="nav-expenseSection" onclick="showPage('expenseSection')">💸<br>Pengeluaran</button>
@@ -596,7 +633,9 @@ let materials=readData(MATERIAL_KEY);
 let recipes=readData(RECIPE_KEY);
 let sales=readData(SALES_KEY);
 let cart=[];
-
+let flavors = [];
+let sharedRecipes = [];
+  
 function id(){
  return Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 }
@@ -642,11 +681,12 @@ function applyRoleAccess() {
 }
 
 function showPage(page){
-    // Batasi halaman khusus pemilik
+  // Batasi halaman khusus pemilik
   const ownerOnlyPages = [
     'products',
     'materials',
     'recipes',
+    'flavors',
     'report',
     'expenseSection',
     'backup'
@@ -656,23 +696,40 @@ function showPage(page){
     alert('Akses ditolak! Menu ini hanya untuk pemilik.');
     page = 'dashboard';
   }
- ['dashboard','sales','products','materials','recipes','history','report','expenseSection','backup'].forEach(p=>{
-  const section=document.getElementById(p);
-  const nav=document.getElementById('nav-'+p);
-  if(section)section.classList.toggle('hidden',p!==page);
-  if(nav)nav.classList.toggle('active',p===page);
- });
 
- renderAll();
+  [
+    'dashboard',
+    'sales',
+    'products',
+    'materials',
+    'recipes',
+    'flavors',
+    'history',
+    'report',
+    'expenseSection',
+    'backup'
+  ].forEach(p=>{
+    const section = document.getElementById(p);
+    const nav = document.getElementById('nav-'+p);
 
- if(page==='report'){
-  renderExpenseReport();
-  renderSalesReport();
-}
+    if(section) section.classList.toggle('hidden',p!==page);
+    if(nav) nav.classList.toggle('active',p===page);
+  });
 
- if(page==='expenseSection'){
-  renderExpenses();
- }
+  renderAll();
+  
+  if(page === 'flavors'){
+  renderFlavorMaterialOptions();
+  }
+
+  if(page==='report'){
+    renderExpenseReport();
+    renderSalesReport();
+  }
+
+  if(page==='expenseSection'){
+    renderExpenses();
+  }
 }
 
 
@@ -1017,6 +1074,51 @@ function renderMaterials(){
 }
 
 
+function renderFlavors(){
+  const el = document.getElementById('flavorList');
+  if(!el) return;
+
+  if(!flavors.length){
+    el.innerHTML = '<div class="empty">Belum ada varian rasa.</div>';
+    return;
+  }
+
+  el.innerHTML = flavors.map(f => {
+    const material = materials.find(m =>
+      String(m.id) === String(f.materialId)
+    );
+
+    return `<div class="item">
+      <div class="rowline">
+        <strong>${safe(f.name)}</strong>
+        <span class="badge">
+          ${f.active ? 'Aktif' : 'Nonaktif'}
+        </span>
+      </div>
+
+      <div class="muted">
+        Bahan bubuk:
+        <b>${material ? safe(material.name) : 'Bahan tidak ditemukan'}</b>
+      </div>
+
+      <div class="muted">
+        Stok tersedia:
+        <b>${material ? material.stock + ' ' + safe(material.unit) : '-'}</b>
+      </div>
+
+      <div class="rowline">
+        <button onclick="editFlavor('${safe(f.id)}')">
+          ✏️ Edit
+        </button>
+
+        <button onclick="toggleFlavor('${safe(f.id)}')">
+          ${f.active ? 'Nonaktifkan' : 'Aktifkan'}
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
 
 async function addMaterial() {
   const name = document.getElementById('materialName').value.trim();
@@ -1085,6 +1187,88 @@ async function addMaterial() {
   }
 }
 
+
+function renderFlavorMaterialOptions() {
+  const select = document.getElementById('flavorMaterial');
+  if (!select) return;
+
+  const usedMaterialIds = flavors.map(f => String(f.materialId));
+
+  const availableMaterials = materials.filter(m =>
+    m.unit === 'sachet' &&
+    !usedMaterialIds.includes(String(m.id))
+  );
+
+  select.innerHTML = '<option value="">Pilih bahan bubuk</option>';
+
+  availableMaterials.forEach(m => {
+    const option = document.createElement('option');
+    option.value = m.id;
+    option.textContent = m.name + ' (Stok: ' + m.stock + ' sachet)';
+    select.appendChild(option);
+  });
+}
+
+async function addFlavor() {
+  const name = document.getElementById('flavorName').value.trim();
+  const materialId = document.getElementById('flavorMaterial').value;
+
+  if (!name) {
+    return alert('Nama rasa harus diisi.');
+  }
+
+  if (!materialId) {
+    return alert('Pilih bahan bubuk rasa.');
+  }
+
+  const duplicate = flavors.find(f =>
+    f.name.trim().toLowerCase() === name.toLowerCase()
+  );
+
+  if (duplicate) {
+    return alert('Varian rasa tersebut sudah tersedia.');
+  }
+
+  const material = materials.find(m =>
+    String(m.id) === String(materialId)
+  );
+
+  if (!material || material.unit !== 'sachet') {
+    return alert('Bahan rasa harus menggunakan satuan sachet.');
+  }
+
+  const flavor = {
+    id: id(),
+    name: name,
+    materialId: materialId,
+    active: true,
+    createdAt: new Date().toISOString()
+  };
+
+  try {
+    const { error } = await supabaseClient
+      .from('flavors')
+      .insert([{
+        id: flavor.id,
+        name: flavor.name,
+        material_id: flavor.materialId,
+        active: true
+      }]);
+
+    if (error) throw error;
+
+    flavors.push(flavor);
+    saveData('popIceFlavors', flavors);
+
+    document.getElementById('flavorName').value = '';
+
+    renderFlavorMaterialOptions();
+
+    alert('Varian rasa berhasil disimpan!');
+  } catch (error) {
+    alert('Gagal menyimpan varian rasa: ' + error.message);
+  }
+}
 
 
 async function editMaterial(materialId) {
@@ -1173,6 +1357,88 @@ async function editMaterial(materialId) {
 }
 
 
+async function editFlavor(flavorId) {
+  const f = flavors.find(x =>
+    String(x.id) === String(flavorId)
+  );
+
+  if (!f) return alert('Varian rasa tidak ditemukan.');
+
+  const name = prompt('Nama varian rasa:', f.name);
+  if (name === null) return;
+
+  const newName = name.trim();
+
+  if (!newName) {
+    return alert('Nama rasa tidak boleh kosong.');
+  }
+
+  const duplicate = flavors.find(x =>
+    String(x.id) !== String(flavorId) &&
+    x.name.trim().toLowerCase() === newName.toLowerCase()
+  );
+
+  if (duplicate) {
+    return alert('Nama rasa sudah digunakan.');
+  }
+
+  try {
+    const { error } = await supabaseClient
+      .from('flavors')
+      .update({ name: newName })
+      .eq('id', f.id);
+
+    if (error) throw error;
+
+    f.name = newName;
+
+    saveData('popIceFlavors', flavors);
+
+    renderFlavors();
+    renderFlavorMaterialOptions();
+
+    alert('Varian rasa berhasil diperbarui!');
+  } catch (error) {
+    alert('Gagal memperbarui varian rasa: ' + error.message);
+  }
+}
+
+async function toggleFlavor(flavorId) {
+  const f = flavors.find(x =>
+    String(x.id) === String(flavorId)
+  );
+
+  if (!f) return alert('Varian rasa tidak ditemukan.');
+
+  const action = f.active ? 'menonaktifkan' : 'mengaktifkan';
+
+  if (!confirm('Yakin ingin ' + action + ' rasa ' + f.name + '?')) {
+    return;
+  }
+
+  const newStatus = !f.active;
+
+  try {
+    const { error } = await supabaseClient
+      .from('flavors')
+      .update({ active: newStatus })
+      .eq('id', f.id);
+
+    if (error) throw error;
+
+    f.active = newStatus;
+
+    saveData('popIceFlavors', flavors);
+
+    renderFlavors();
+    renderFlavorMaterialOptions();
+
+    alert('Status varian rasa berhasil diperbarui!');
+  } catch (error) {
+    alert('Gagal mengubah status rasa: ' + error.message);
+  }
+}
+
 function deleteMaterial(materialId) {
  const m = materials.find(x =>
   String(x.id) === String(materialId)
@@ -1251,7 +1517,24 @@ function renderProductOptions(){
  if(products.some(p=>String(p.id)===old))select.value=old;
  updateSelectedProduct();
 }
+function renderSaleFlavorOptions(){
+  const select = document.getElementById('saleFlavor');
+  if(!select) return;
 
+  const oldValue = select.value;
+
+  const activeFlavors = flavors.filter(f => f.active === true);
+
+  select.innerHTML =
+    '<option value="">-- Pilih rasa --</option>' +
+    activeFlavors.map(f =>
+      `<option value="${safe(f.id)}">${safe(f.name)}</option>`
+    ).join('');
+
+  if(activeFlavors.some(f => String(f.id) === oldValue)){
+    select.value = oldValue;
+  }
+}
 // ===== FORM RESEP POP ICE =====
 
 function renderRecipeOptions() {
@@ -1289,25 +1572,52 @@ function renderRecipeOptions() {
 
 
 function updateSelectedProduct(){
- const p=products.find(x=>String(x.id)===document.getElementById('saleProduct').value);
- document.getElementById('selectedProductInfo').textContent=
-  p?'Harga: '+money(productPrice(p)):'Pilih produk untuk melihat harga.';
+  const p = products.find(x =>
+    String(x.id) === document.getElementById('saleProduct').value
+  );
+
+  document.getElementById('selectedProductInfo').textContent =
+    p ? 'Harga: ' + money(productPrice(p)) :
+    'Pilih produk untuk melihat harga.';
+
+  renderSaleFlavorOptions();
 }
 document.getElementById('saleProduct').addEventListener('change',updateSelectedProduct);
 
 function addToCart(){
- const pid=document.getElementById('saleProduct').value;
- const qty=Number(document.getElementById('saleQuantity').value);
- const p=products.find(x=>String(x.id)===pid);
- if(!p)return alert('Pilih produk terlebih dahulu.');
- if(!Number.isInteger(qty)||qty<1)return alert('Jumlah harus minimal 1.');
- if(productPrice(p)<=0)return alert('Harga produk belum benar. Periksa data produk.');
+  const pid = document.getElementById('saleProduct').value;
+  const flavorId = document.getElementById('saleFlavor').value;
+  const qty = Number(document.getElementById('saleQuantity').value);
 
- const existing=cart.find(x=>String(x.productId)===pid);
- if(existing)existing.qty+=qty;
- else cart.push({productId:pid,qty});
- document.getElementById('saleQuantity').value=1;
- renderCart();
+  const p = products.find(x => String(x.id) === pid);
+  const flavor = flavors.find(x =>
+    String(x.id) === flavorId && x.active === true
+  );
+
+  if(!p) return alert('Pilih produk terlebih dahulu.');
+  if(!flavor) return alert('Pilih varian rasa terlebih dahulu.');
+  if(!Number.isInteger(qty) || qty < 1)
+    return alert('Jumlah harus minimal 1.');
+  if(productPrice(p) <= 0)
+    return alert('Harga produk belum benar. Periksa data produk.');
+
+  const existing = cart.find(x =>
+    String(x.productId) === pid &&
+    String(x.flavorId) === flavorId
+  );
+
+  if(existing){
+    existing.qty += qty;
+  }else{
+    cart.push({
+      productId: pid,
+      flavorId: flavorId,
+      qty: qty
+    });
+  }
+
+  document.getElementById('saleQuantity').value = 1;
+  renderCart();
 }
 
 function cartTotal(){
@@ -1317,17 +1627,30 @@ function cartTotal(){
  },0);
 }
 
-function changeQty(pid,delta){
- const item=cart.find(x=>String(x.productId)===String(pid));
- if(!item)return;
- item.qty+=delta;
- if(item.qty<=0)cart=cart.filter(x=>x!==item);
- renderCart();
+function changeQty(pid, flavorId, delta){
+  const item = cart.find(x =>
+    String(x.productId) === String(pid) &&
+    String(x.flavorId) === String(flavorId)
+  );
+
+  if(!item) return;
+
+  item.qty += delta;
+
+  if(item.qty <= 0){
+    cart = cart.filter(x => x !== item);
+  }
+
+  renderCart();
 }
 
-function removeCartItem(pid){
- cart=cart.filter(x=>String(x.productId)!==String(pid));
- renderCart();
+function removeCartItem(pid, flavorId){
+  cart = cart.filter(x =>
+    !(String(x.productId) === String(pid) &&
+      String(x.flavorId) === String(flavorId))
+  );
+
+  renderCart();
 }
 
 function clearCart(){
@@ -1339,30 +1662,50 @@ function clearCart(){
 }
 
 function renderCart(){
- const el=document.getElementById('cartList');
- if(!cart.length){
-  el.innerHTML='<div class="empty">Keranjang masih kosong.</div>';
- }else{
-  el.innerHTML=cart.map(item=>{
-   const p=products.find(x=>String(x.id)===String(item.productId));
-   if(!p)return '';
-   return `<div class="cartrow">
-    <div style="flex:1">
-     <strong>${safe(productName(p))}</strong>
-     <div class="muted">${money(productPrice(p))} × ${item.qty} = ${money(productPrice(p)*item.qty)}</div>
-    </div>
-    <div class="qtycontrols">
-     <button class="secondary" onclick="changeQty('${safe(item.productId)}',-1)">−</button>
-     <b>${item.qty}</b>
-     <button class="secondary" onclick="changeQty('${safe(item.productId)}',1)">+</button>
-    </div>
-    <button class="small danger" onclick="removeCartItem('${safe(item.productId)}')">×</button>
-   </div>`;
-  }).join('');
- }
- document.getElementById('cartTotal').textContent=money(cartTotal());
- document.getElementById('paymentTotal').textContent=money(cartTotal());
- updatePayment();
+  const el = document.getElementById('cartList');
+
+  if(!cart.length){
+    el.innerHTML = '<div class="empty">Keranjang masih kosong.</div>';
+  }else{
+    el.innerHTML = cart.map(item => {
+      const p = products.find(x =>
+        String(x.id) === String(item.productId)
+      );
+
+      const flavor = flavors.find(f =>
+        String(f.id) === String(item.flavorId)
+      );
+
+      if(!p) return '';
+
+      const price = productPrice(p);
+
+      return `<div class="cartrow">
+        <div style="flex:1">
+          <strong>${safe(productName(p))} - ${safe(flavor ? flavor.name : 'Rasa tidak ditemukan')}</strong>
+          <div class="muted">
+            ${money(price)} × ${item.qty} = ${money(price * item.qty)}
+          </div>
+        </div>
+
+        <div class="qtycontrols">
+          <button class="secondary"
+            onclick="changeQty('${safe(item.productId)}','${safe(item.flavorId)}',-1)">−</button>
+          <b>${item.qty}</b>
+          <button class="secondary"
+            onclick="changeQty('${safe(item.productId)}','${safe(item.flavorId)}',1)">+</button>
+        </div>
+
+        <button class="small danger"
+          onclick="removeCartItem('${safe(item.productId)}','${safe(item.flavorId)}')">×</button>
+      </div>`;
+    }).join('');
+  }
+
+  document.getElementById('cartTotal').textContent = money(cartTotal());
+  document.getElementById('paymentTotal').textContent = money(cartTotal());
+
+  updatePayment();
 }
 
 
@@ -1401,139 +1744,229 @@ function updatePayment(){
 
 
 function calculateRequiredStock(){
- const required={};
- for(const item of cart){
-  const product=products.find(p=>String(p.id)===String(item.productId));
-  if(!product)return {ok:false,message:'Ada produk yang tidak ditemukan.'};
-  const productRecipes=recipes.filter(r=>String(r.productId)===String(item.productId));
-  if(!productRecipes.length){
-   return {ok:false,message:'Resep '+productName(product)+' belum dibuat. Lengkapi resep sebelum menjual.'};
-  }
-  for(const r of productRecipes){
-   const m=materials.find(x=>String(x.id)===String(r.materialId));
-   if(!m)return {ok:false,message:'Bahan dalam resep tidak ditemukan.'};
-   const amount=Number(r.qty)*item.qty;
-   if(!Number.isFinite(amount)||amount<=0)
-    return {ok:false,message:'Takaran resep tidak valid untuk '+m.name+'.'};
-   required[m.id]=(required[m.id]||0)+amount;
-  }
- }
- for(const materialId of Object.keys(required)){
-  const m=materials.find(x=>String(x.id)===String(materialId));
-  if(Number(m.stock)<required[materialId]){
-   return {ok:false,message:'Stok '+m.name+' tidak cukup. Tersedia '+m.stock+' '+m.unit+', dibutuhkan '+required[materialId]+' '+m.unit+'.'};
-  }
- }
- return {ok:true,required};
-}
+  const required = {};
 
+  function addRequired(materialId, qty){
+    const m = materials.find(x =>
+      String(x.id) === String(materialId)
+    );
+
+    if(!m) return 'Bahan dalam resep tidak ditemukan.';
+
+    const amount = Number(qty);
+
+    if(!Number.isFinite(amount) || amount <= 0){
+      return 'Takaran bahan tidak valid untuk ' + m.name + '.';
+    }
+
+    required[m.id] = (required[m.id] || 0) + amount;
+    return null;
+  }
+
+  for(const item of cart){
+    const product = products.find(p =>
+      String(p.id) === String(item.productId)
+    );
+
+    if(!product) return {
+      ok:false,
+      message:'Ada produk yang tidak ditemukan.'
+    };
+
+    const flavor = flavors.find(f =>
+      String(f.id) === String(item.flavorId) && f.active === true
+    );
+
+    if(!flavor) return {
+      ok:false,
+      message:'Varian rasa tidak ditemukan atau sudah nonaktif.'
+    };
+
+    // Resep umum produk
+    const productRecipes = recipes.filter(r =>
+      String(r.productId) === String(item.productId) &&
+      !r.flavorId
+    );
+
+    for(const r of productRecipes){
+      const error = addRequired(
+        r.materialId,
+        Number(r.qty) * item.qty
+      );
+
+      if(error) return {ok:false,message:error};
+    }
+
+    // Resep bersama, termasuk Cup 16 oz
+    for(const r of sharedRecipes){
+      const error = addRequired(
+        r.materialId,
+        Number(r.qty) * item.qty
+      );
+
+      if(error) return {ok:false,message:error};
+    }
+
+    // Bubuk rasa: tepat 1 sachet per gelas
+    const error = addRequired(flavor.materialId, item.qty);
+
+    if(error) return {ok:false,message:error};
+  }
+
+  for(const materialId of Object.keys(required)){
+    const m = materials.find(x =>
+      String(x.id) === String(materialId)
+    );
+
+    if(Number(m.stock) < required[materialId]){
+      return {
+        ok:false,
+        message:'Stok '+m.name+' tidak cukup. Tersedia '+
+          m.stock+' '+m.unit+', dibutuhkan '+
+          required[materialId]+' '+m.unit+'.'
+      };
+    }
+  }
+
+  return {ok:true,required};
+}
+function testStockCalculation(){
+  const result = calculateRequiredStock();
+
+  if(!result.ok){
+    return alert(result.message);
+  }
+
+  const details = Object.entries(result.required).map(([materialId, qty])=>{
+    const material = materials.find(m =>
+      String(m.id) === String(materialId)
+    );
+
+    return (material ? material.name : materialId) +
+      ': ' + qty + ' ' + (material ? material.unit : '');
+  });
+
+  alert(
+    'HASIL PEMERIKSAAN STOK\n\n' +
+    details.join('\n') +
+    '\n\nTidak ada transaksi yang disimpan.'
+  );
+ }
 
 async function checkout(){
- if(!cart.length)return alert('Keranjang masih kosong.');
+  if(!cart.length) return alert('Keranjang masih kosong.');
 
- if(!currentUser || !currentRole){
-  return alert('Silakan login terlebih dahulu.');
- }
+  if(!currentUser || !currentRole){
+    return alert('Silakan login terlebih dahulu.');
+  }
 
- const total=cartTotal();
- const method=document.getElementById('paymentMethod').value;
+  const total = cartTotal();
+  const method = document.getElementById('paymentMethod').value;
 
- let cash;
+  let cash;
 
- if(method==='Tunai'){
-  cash=Number(document.getElementById('cashReceived').value);
+  if(method === 'Tunai'){
+    cash = Number(document.getElementById('cashReceived').value);
 
-  if(!Number.isFinite(cash)||cash<total)
-   return alert('Uang pelanggan belum mencukupi.');
+    if(!Number.isFinite(cash) || cash < total)
+      return alert('Uang pelanggan belum mencukupi.');
 
-  if(!Number.isInteger(cash))
-   return alert('Nominal uang harus berupa angka bulat.');
- } else {
-  cash=total;
- }
+    if(!Number.isInteger(cash))
+      return alert('Nominal uang harus berupa angka bulat.');
+  }else{
+    cash = total;
+  }
 
- const change=method==='Tunai'?cash-total:0;
+  const change = method === 'Tunai' ? cash - total : 0;
 
- const stockCheck=calculateRequiredStock();
- if(!stockCheck.ok)return alert(stockCheck.message);
+  const stockCheck = calculateRequiredStock();
+  if(!stockCheck.ok) return alert(stockCheck.message);
 
- const confirmation=confirm(
-  'Konfirmasi transaksi?\n\n' +
-  'Total: '+money(total)+'\n' +
-  'Metode: '+method+'\n' +
-  'Stok akan dikurangi dari database cloud.'
- );
+  const confirmation = confirm(
+    'Konfirmasi transaksi?\n\n' +
+    'Total: ' + money(total) + '\n' +
+    'Metode: ' + method + '\n' +
+    'Stok akan dikurangi dari database cloud.'
+  );
 
- if(!confirmation)return;
+  if(!confirmation) return;
 
- const items=cart.map(item=>{
-  const p=products.find(x=>String(x.id)===String(item.productId));
+  const items = cart.map(item => {
+    const p = products.find(x =>
+      String(x.id) === String(item.productId)
+    );
 
-  return {
-   productId:item.productId,
-   name:productName(p),
-   price:productPrice(p),
-   qty:item.qty,
-   subtotal:productPrice(p)*item.qty
+    const flavor = flavors.find(f =>
+      String(f.id) === String(item.flavorId)
+    );
+
+    return {
+      productId: item.productId,
+      name: productName(p),
+      flavorId: flavor.id,
+      flavorName: flavor.name,
+      price: productPrice(p),
+      qty: item.qty,
+      subtotal: productPrice(p) * item.qty
+    };
+  });
+
+  const transaction = {
+    id: id(),
+    date: new Date().toISOString(),
+    items,
+    total,
+    paymentMethod: method,
+    cash,
+    change
   };
- });
 
- const transaction={
-  id:id(),
-  date:new Date().toISOString(),
-  items,
-  total,
-  paymentMethod:method,
-  cash,
-  change
- };
+  try{
+    const {data,error} = await supabaseClient.rpc(
+      'checkout_sale',
+      {
+        p_sale: transaction,
+        p_required: stockCheck.required
+      }
+    );
 
- try {
-  const {data,error}=await supabaseClient.rpc(
-   'checkout_sale',
-   {
-    p_sale:transaction,
-    p_required:stockCheck.required
-   }
-  );
+    if(error) throw error;
 
-  if(error)throw error;
+    if(!data || !['success','already_processed'].includes(data.status)){
+      throw new Error('Status transaksi dari server tidak dikenali.');
+    }
 
-  if(!data || !['success','already_processed'].includes(data.status)){
-   throw new Error('Status transaksi dari server tidak dikenali.');
+    cart = [];
+
+    document.getElementById('cashReceived').value = '';
+
+    const refreshed = await loadCloudData();
+
+    renderAll();
+    updatePayment();
+
+    const savedTransaction = sales.find(
+      s => String(s.id) === String(transaction.id)
+    );
+
+    if(!savedTransaction){
+      alert('Transaksi tersimpan, tetapi data struk belum ditemukan. Muat ulang aplikasi.');
+      return;
+    }
+
+    showReceipt(savedTransaction);
+
+    if(!refreshed){
+      alert('Transaksi tersimpan di cloud, tetapi pembaruan tampilan data gagal. Muat ulang aplikasi.');
+    }
+
+  }catch(error){
+    alert(
+      'Transaksi gagal disimpan!\n\n' +
+      error.message +
+      '\n\nKeranjang tetap dipertahankan. Periksa status transaksi sebelum mencoba kembali.'
+    );
   }
-
-  cart=[];
-
-  document.getElementById('cashReceived').value='';
-
-  const refreshed=await loadCloudData();
-
-  renderAll();
-  updatePayment();
-
-  const savedTransaction = sales.find(
-  s => String(s.id) === String(transaction.id)
-);
-
-if (!savedTransaction) {
-  alert('Transaksi tersimpan, tetapi data struk belum ditemukan. Muat ulang aplikasi.');
-  return;
-}
-
-showReceipt(savedTransaction);
-
-  if(!refreshed){
-   alert('Transaksi tersimpan di cloud, tetapi pembaruan tampilan data gagal. Muat ulang aplikasi.');
-  }
-
- } catch(error) {
-  alert(
-   'Transaksi gagal disimpan!\n\n'+
-   error.message+
-   '\n\nKeranjang tetap dipertahankan. Periksa status transaksi sebelum mencoba kembali.'
-  );
- }
 }
 
 
@@ -2139,14 +2572,22 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function renderAll(){
- products=readData(PRODUCT_KEY);
- materials=readData(MATERIAL_KEY);
- recipes=readData(RECIPE_KEY);
- sales=readData(SALES_KEY);
+ products = readData(PRODUCT_KEY);
+ materials = readData(MATERIAL_KEY);
+ recipes = readData(RECIPE_KEY);
+ sales = readData(SALES_KEY);
+
+ // Data varian rasa
+ flavors = readData('popIceFlavors');
+
+ // Data resep bersama
+ sharedRecipes = readData('popIceSharedRecipes');
+
  renderDashboard();
  renderProducts();
  renderMaterials();
  renderRecipes();
+ renderFlavors();
  renderProductOptions();
  renderRecipeOptions();
  renderCart();
@@ -2530,19 +2971,24 @@ async function loginUser() {
 // AMBIL DATA DARI SUPABASE
 // =================================
 
+
 async function loadCloudData() {
   try {
-    const [p, m, r, s] = await Promise.all([
+    const [p, m, r, s, f, sr] = await Promise.all([
       supabaseClient.from('products').select('*'),
       supabaseClient.from('materials').select('*'),
       supabaseClient.from('recipes').select('*'),
-      supabaseClient.from('sales').select('*')
+      supabaseClient.from('sales').select('*'),
+      supabaseClient.from('flavors').select('*'),
+      supabaseClient.from('shared_recipes').select('*')
     ]);
 
     if (p.error) throw p.error;
     if (m.error) throw m.error;
     if (r.error) throw r.error;
     if (s.error) throw s.error;
+    if (f.error) throw f.error;
+    if (sr.error) throw sr.error;
 
     let cloudExpenses = null;
 
@@ -2555,13 +3001,14 @@ async function loadCloudData() {
       cloudExpenses = e.data;
     }
 
-    // Ubah format data cloud ke format aplikasi
+    // Produk
     const newProducts = (p.data || []).map(x => ({
       id: x.id,
       name: x.name,
       price: Number(x.price)
     }));
 
+    // Bahan baku
     const newMaterials = (m.data || []).map(x => ({
       id: x.id,
       name: x.name,
@@ -2572,30 +3019,52 @@ async function loadCloudData() {
       unit: x.unit
     }));
 
+    // Resep produk
     const newRecipes = (r.data || []).map(x => ({
       id: x.id,
       productId: x.product_id,
       materialId: x.material_id,
+      flavorId: x.flavor_id || null,
       qty: Number(x.qty)
     }));
 
-    const newSales = (s.data || []).map(x => ({
-  id: x.id,
-  date: x.date,
-  items: x.items || [],
-  total: Number(x.total),
-  totalHpp: Number(x.total_hpp || 0),
-  profit: Number(x.profit || 0),
-  paymentMethod: x.payment_method,
-  cash: Number(x.cash || 0),
-  change: Number(x.change_amount || 0)
-}));
+    // Daftar rasa
+    const newFlavors = (f.data || []).map(x => ({
+      id: x.id,
+      name: x.name,
+      materialId: x.material_id,
+      active: x.active,
+      createdAt: x.created_at
+    }));
 
-    // Simpan hanya setelah semua data berhasil dibaca
+    // Resep bersama
+    const newSharedRecipes = (sr.data || []).map(x => ({
+      id: x.id,
+      materialId: x.material_id,
+      qty: Number(x.qty)
+    }));
+
+    // Riwayat transaksi
+    const newSales = (s.data || []).map(x => ({
+      id: x.id,
+      date: x.date,
+      items: x.items || [],
+      total: Number(x.total),
+      totalHpp: Number(x.total_hpp || 0),
+      profit: Number(x.profit || 0),
+      paymentMethod: x.payment_method,
+      cash: Number(x.cash || 0),
+      change: Number(x.change_amount || 0)
+    }));
+
+    // Simpan setelah semua data berhasil dibaca
     saveData(PRODUCT_KEY, newProducts);
     saveData(MATERIAL_KEY, newMaterials);
     saveData(RECIPE_KEY, newRecipes);
     saveData(SALES_KEY, newSales);
+
+    saveData('popIceFlavors', newFlavors);
+    saveData('popIceSharedRecipes', newSharedRecipes);
 
     if (cloudExpenses !== null) {
       saveExpenses(cloudExpenses.map(x => ({
@@ -2614,6 +3083,7 @@ async function loadCloudData() {
     return false;
   }
 }
+
 // =================================
 // SUPABASE REALTIME
 // =================================
